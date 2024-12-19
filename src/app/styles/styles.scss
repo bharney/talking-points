@@ -1,0 +1,286 @@
+/* ----------------------------FORM INPUT-------------------*/
+@use "./formInput.scss";
+// end main
+
+/* ----------------------------ALERT------------------------*/
+@use "./toastr.scss";
+// end Alert
+
+/* ---------------------- SLIDER -------------------- */
+@use "./slider.scss";
+// end slider
+
+@import "./colors.module.scss";
+
+/*  ----------------------- HEADER --------------------------- */
+
+// end of header
+
+/*  ----------------------- NAVIGATION --------------------------- */
+nav {
+  font-size: 1rem;
+  font-family: "Fjalla One", sans-serif;
+  .nav-link {
+    color: $secondary;
+    font-size: 1.5rem;
+  }
+  .navbar-brand {
+    color: $secondary;
+    font-size: 1.5rem;
+    &:hover {
+      color: $secondary;
+    }
+  }
+}
+#custom-nav {
+  color: $secondary;
+  font-family: "Fjalla One", sans-serif;
+  font-size: 1.5rem;
+  padding-top: 1em;
+  padding-bottom: 1em;
+  opacity: 1;
+  box-shadow: none;
+  z-index: 999;
+  border-bottom: 1px solid $darker;
+  box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  -webkit-font-smoothing: antialiased;
+  -webkit-transition: background 0.5s ease-in-out, opacity 0.5s ease;
+  -moz-transition: background 0.5s ease-in-out, opacity 0.5s ease;
+  transition: background 0.5s ease-in-out, opacity 0.5s ease;
+
+  &.affix {
+    top: 0;
+    min-width: 100%;
+    padding-top: 0.25em;
+    padding-bottom: 0.5em;
+    opacity: 0.9;
+    -webkit-transition: background 0.5s ease-in-out, opacity 0.5s ease,
+      padding 0.8s;
+    -moz-transition: background 0.5s ease-in-out, opacity 0.5s ease,
+      padding 0.8s;
+    -webkit-transition: padding-top 0.5s ease, padding-bottom 0.5s ease;
+    -moz-transition: padding-top 0.5s ease, padding-bottom 0.5s ease;
+    transition: background 0.5s ease-in-out, opacity 0.5s ease,
+      padding-top 0.5s ease, padding-top 0.5s ease, padding-bottom 0.5s ease;
+  }
+
+  & > div.container {
+    @media (max-width: 1199px) {
+      width: 100%;
+      max-width: none;
+    }
+  }
+}
+// end nav
+
+/*  ----------------------- MAIN --------------------------- */
+main {
+  color: $light;
+  background-color: $dark;
+  padding-top: 3%;
+
+  @media screen and (max-width: 991px) {
+    overflow-x: hidden;
+  }
+
+  &.container {
+    @media (max-width: 1199px) {
+      width: 100%;
+      max-width: none;
+    }
+  }
+
+  .hero {
+    font-family: "Fira Sans Condensed", sans-serif;
+    font-weight: 600;
+    font-size: 6rem;
+    color: $secondary;
+  }
+
+  .hero-border {
+    border-width: 5px !important;
+  }
+
+  .hero-text {
+    color: $secondary;
+    font-size: 2rem;
+  }
+
+  .landing p {
+    font-size: 1.5rem;
+  }
+
+  .album .card {
+    border: none;
+  }
+
+  .icon-link {
+    color: $dark;
+    font-size: 2rem;
+    text-decoration: none;
+  }
+}
+
+.dropdown-menu {
+  @media (max-width: 415px) {
+    min-width: 7.75rem;
+  }
+
+  &.show {
+    position: absolute !important;
+  }
+}
+
+.mobile-nav {
+  --bs-nav-link-padding-x: 0.45rem;
+}
+
+.dropdown-arrow {
+  margin-left: 2px;
+  margin-bottom: 4px;
+
+  @media (max-width: 991px) {
+    margin-top: 2px;
+  }
+
+  @media (max-width: 415px) {
+    margin-left: 2px;
+    margin-bottom: 4px;
+  }
+}
+
+.ellipsis {
+  font-size: 1em;
+  padding-left: 5px;
+
+  @media (max-width: 991px) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.user-icon {
+  font-size: 1.3em;
+  overflow: hidden;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.signed-in {
+  padding-top: 0.06em;
+  padding-bottom: 0.06em;
+  font-size: 1.8em;
+
+  @media (max-width: 455px) {
+    font-size: 1.4em;
+    padding-bottom: 0;
+  }
+}
+
+.content {
+  @media screen and (max-width: 991px) {
+    padding-top: 1em;
+  }
+}
+
+.group-right {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.group-left {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.container {
+  @media (min-width: 1200px) {
+    max-width: 1333px;
+  }
+}
+
+.dropdown-item .nav-icon {
+  @media (max-width: 415px) {
+    padding-right: 0px;
+  }
+
+  @media (max-width: 991px) {
+    margin-left: 5px;
+    margin-right: 5px;
+  }
+}
+
+.max-userName {
+  @media (max-width: 991px) {
+    max-width: 100%;
+  }
+
+  @media (max-width: 615px) {
+    max-width: 220px;
+  }
+
+  @media (max-width: 455px) {
+    max-width: 195px;
+  }
+
+  @media (max-width: 435px) {
+    max-width: 190px;
+  }
+
+  @media (max-width: 415px) {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 991px) {
+  .navbar-nav {
+    flex-direction: row;
+    padding-left: 0;
+    padding-right: 0.5em;
+    margin-bottom: 0;
+    padding-right: 5px;
+    padding-bottom: 0;
+  }
+
+  .userName {
+    display: flex;
+    justify-content: flex-start;
+    padding-right: 0.2em;
+    margin-left: 0.2em;
+  }
+
+  .notification-counter {
+    top: 0px;
+    left: 20px;
+  }
+}
+
+.sign-in {
+  @media (max-width: 455px) {
+    font-size: 1em;
+  }
+
+  @media (max-width: 435px) {
+    padding-top: 0.25rem;
+    font-size: 1.3em;
+  }
+}
+
+@media (max-width: 415px) {
+  .navbar-brand {
+    margin-right: 0.5rem;
+  }
+
+  .userMenu {
+    margin-right: 10px;
+  }
+}
+
+/*  ----------------------- FOOTER --------------------------- */
+footer {
+  padding: 30px 0;
+  color: $light;
+}
+// end footer*/

@@ -1,15 +1,32 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import {
+  Fira_Sans_Condensed,
+  Fjalla_One,
+  Playfair_Display,
+} from "next/font/google";
+import "./styles/index.scss";
+import layoutStyles from "./page.module.scss";
+import Script from "next/script";
+import Footer from "./components/footer";
+import React from "react";
+import NavWrapper from "./components/nav-wrapper";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const firaSansCondensed = Fira_Sans_Condensed({
+  variable: "--font-fira-sans-condensed",
   subsets: ["latin"],
+  weight: "600",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const fjallaOne = Fjalla_One({
+  variable: "--font-fjalla-one",
   subsets: ["latin"],
+  weight: "400",
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair-display",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -24,8 +41,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+      <body
+        className={`${firaSansCondensed.variable} ${fjallaOne.variable} ${playfairDisplay.variable} ${layoutStyles.bodyClassName} ${layoutStyles.padBody}`}
+      >
+        <NavWrapper>{children}</NavWrapper>
+        <Footer />
+        <Script
+          src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+          integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
+          crossOrigin="anonymous"
+        ></Script>
+        <Script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"
+          integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy"
+          crossOrigin="anonymous"
+        ></Script>
       </body>
     </html>
   );

@@ -1,0 +1,12 @@
+@import "./styles/colors.module.scss";
+
+.htmlClassName,
+.bodyClassName {
+  overflow-x: hidden; /* Prevent scroll on narrow devices */
+  font-family: "Playfair Display", serif;
+  background-color: $dark;
+}
+
+.padBody {
+  padding-top: 80px;
+}
