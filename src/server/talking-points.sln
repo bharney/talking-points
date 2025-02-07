@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35431.28
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "talking-points", "talking-points.csproj", "{CEE6A027-9F79-4606-B90D-6D021570500E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CEE6A027-9F79-4606-B90D-6D021570500E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEE6A027-9F79-4606-B90D-6D021570500E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEE6A027-9F79-4606-B90D-6D021570500E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEE6A027-9F79-4606-B90D-6D021570500E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AF11D96A-5301-4D1F-88FB-699744190E25}
+	EndGlobalSection
+EndGlobal

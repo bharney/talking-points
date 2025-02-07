@@ -10,7 +10,6 @@ export const NavContext = React.createContext({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   handleOverlayToggle: (_e: Event) => {},
 });
-export const AuthContext = React.createContext(null);
 
 export default function NavWrapper({
   children,
