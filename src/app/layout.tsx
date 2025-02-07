@@ -42,7 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${firaSansCondensed.variable} ${fjallaOne.variable} ${playfairDisplay.variable} ${layoutStyles.bodyClassName} ${layoutStyles.padBody}`}
+        className={`${firaSansCondensed.variable} ${fjallaOne.variable} ${playfairDisplay.variable} ${layoutStyles.bodyClassName} ${layoutStyles.padBody} container`}
       >
         <NavWrapper>{children}</NavWrapper>
         <Footer />

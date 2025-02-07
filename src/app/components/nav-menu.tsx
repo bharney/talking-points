@@ -51,22 +51,13 @@ export default function NavMenu() {
           >
             <div className="container nav-links">
               <Link className="navbar-brand" onClick={onUpdate} href={"/"}>
-                bharney.com
+                talking-points.com
               </Link>
               <div
                 className="collapse navbar-collapse"
                 id="navbarsExampleDefault"
               >
                 <ul className="navbar-nav me-auto">
-                  <li className="nav-item">
-                    <Link
-                      className={"nav-link root"}
-                      href={"/portfolio"}
-                      onClick={onUpdate}
-                    >
-                      Portfolio
-                    </Link>
-                  </li>
                   <li className="nav-item">
                     <Link
                       className={"nav-link root"}

@@ -1,0 +1,6 @@
+@talking_points_HostAddress = http://localhost:5047
+
+GET {{talking_points_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
