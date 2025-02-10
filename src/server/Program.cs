@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using talking_points.Models;
 using talking_points.Repository;
 
+var allowLocalhost = "allowLocalhost";
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -33,9 +34,24 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
                .AddDefaultTokenProviders();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
+builder.Services.AddScoped<IKeywordRepository, KeywordRepository>();
 builder.Services.AddRazorPages();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: allowLocalhost,
+                      policy =>
+                      {
+                          policy.WithOrigins("http://localhost:3000");
+                      });
+});
 var app = builder.Build();
 
+app.UseCors(allowLocalhost);
+app.UseHttpsRedirection();
+app.UseAuthorization();
+//include controllers
+app.MapControllers();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -43,10 +59,4 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 
 }
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
 app.Run();
