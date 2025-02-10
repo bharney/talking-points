@@ -13,12 +13,13 @@
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
     "@fortawesome/free-solid-svg-icons": "^5.1.0-8",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "@nivo/circle-packing": "^0.88.0",
+    "@nivo/core": "^0.88.0",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
     "history": "^5.3.0",
     "next": "15.1.1",
     "react": "^19.0.0",
-    "react-d3-library": "^1.1.8",
     "react-dom": "^19.0.0",
     "react-router": "^7.0.2",
     "sass": "^1.83.0"
@@ -31,5 +32,11 @@
     "eslint": "^9",
     "eslint-config-next": "15.1.1",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

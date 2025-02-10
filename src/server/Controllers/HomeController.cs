@@ -29,7 +29,7 @@ namespace talking_points.Controllers
 
             // return json object
             var treeViewList = new List<TreeViewModel>();
-
+            var dictionary = new Dictionary<string, int>();
             foreach (var item in articles)
             {
                 var treeView = new TreeViewModel();
@@ -43,21 +43,32 @@ namespace talking_points.Controllers
                     Title = item.Title
                 };
                 var keywords = await _keywordRepository.Get(item.Id);
+                var allKeywords = await _keywordRepository.GetAll();
+                // get the number of times we see the same keyword
                 if (keywords == null)
                 {
-                    treeView.Keywords = new List<Keywords>();
+                    treeView.Keywords = new List<KeywordsWithCount>();
                 }
                 else
                 {
                     foreach (var keyword in keywords)
                     {
-                        treeView.Keywords = new List<Keywords>()
+                        if (dictionary.ContainsKey(keyword.Keyword))
                         {
-                            new Keywords()
+                            continue;
+                        }
+                        dictionary.Add(keyword.Keyword, 0);
+
+                        var count = allKeywords.Count(allKeywords => allKeywords.Keyword == keyword.Keyword);
+                       
+                        treeView.Keywords = new List<KeywordsWithCount>()
+                        {
+                            new KeywordsWithCount()
                             {
                                 Id = keyword.Id,
                                 Keyword = keyword.Keyword,
-                                ArticleId = item.Id
+                                ArticleId = item.Id,
+                                Count = count
                             }
                         };
                     };

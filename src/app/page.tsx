@@ -1,20 +1,34 @@
 "use client";
 import { useState, useEffect } from "react";
-import WordTree, { Article, Keywords } from "../components/WordTree";
-
-interface TreeViewModel {
-  articleDetails: Article;
-  keywords: Keywords[];
-}
+import { CirclePackingChart } from "../components/circle-packing";
+import { RootData, TreeViewModel } from "./models/models";
 
 export default function Home() {
-  const [tree, setTree] = useState<TreeViewModel[]>([]);
+  const [tree, setTree] = useState<RootData | null>(null);
 
   useEffect(() => {
     async function loadArticles() {
       const res = await fetch("https://localhost:7040/Home");
       const treeViewModel = (await res.json()) as TreeViewModel[];
-      setTree(treeViewModel);
+      const transformData = (data: TreeViewModel[]) => {
+        return data
+          .filter((x) => x.keywords)
+          .map((d) => ({
+            name: d.articleDetails.title,
+            children: d.keywords.map((k) => ({
+              name: k.keyword,
+              loc: k.count,
+              color: "hsl(240, 6.20%, 22.20%)",
+            })),
+          }));
+      };
+      // Wrap the array in a root object.
+      setTree({
+        name: "Talking Points",
+        loc: 0,
+        color: "hsl(240, 6.20%, 22.20%)",
+        children: transformData(treeViewModel),
+      });
     }
     loadArticles();
   }, []);
@@ -36,11 +50,7 @@ export default function Home() {
             visualize and link to news articles.
           </p>
           <div></div>
-          {tree
-            .filter((x) => x.keywords)
-            .map((item, i) => (
-              <WordTree key={i} keywords={item.keywords} />
-            ))}
+          {tree && <CirclePackingChart data={tree} />}
         </div>
       </main>
     </>
