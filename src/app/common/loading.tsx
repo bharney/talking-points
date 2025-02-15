@@ -11,9 +11,10 @@ export default function Loading() {
         size="1x"
         style={{
           position: "absolute",
-          top: "7vh",
+          top: "50%",
           left: "50%",
           fontSize: "45px",
+          color: "white",
         }}
         icon={faSpinner as IconProp}
         spin

@@ -86,7 +86,7 @@ export default function NavWrapper({
           state.on ? "active" : ""
         }`}
       >
-        <div className="col-12 col-md-12 col-lg-12">{children}</div>
+        {children}
         <div
           id="sidebar"
           className="col-8 d-md-none d-lg-none d-xl-none sidebar-offcanvas"

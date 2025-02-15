@@ -14,6 +14,17 @@ namespace talking_points
         public string Source { get; set; }
         [Required]
         public string URL { get; set; }
-        public string Abstract { get; set; }
+        public string? Abstract { get; set; }
+    }
+
+    [Table("Keywords")]
+    public class Keywords
+    {
+        [Key]
+        public Guid Id { get; set; }
+        [Required]
+        public string Keyword { get; set; }
+        [ForeignKey("ArticleDetails")]
+        public Guid ArticleId { get; set; }
     }
 }

@@ -4,6 +4,7 @@ using talking_points.Models;
 using System.Threading.Tasks;
 using System.Web;
 using talking_points.Repository;
+using Microsoft.IdentityModel.Tokens;
 
 namespace talking_points.Controllers
 {
@@ -14,13 +15,15 @@ namespace talking_points.Controllers
         private readonly ILogger<ArticleDetailsController> _logger;
         private readonly IConfiguration _config;
         private readonly IArticleRepository _articleRepository;
+        private readonly IKeywordRepository _keywordRepository;
         static HttpClient client = new HttpClient();
 
-        public ArticleDetailsController(ILogger<ArticleDetailsController> logger, IConfiguration config, IArticleRepository articleRepository)
+        public ArticleDetailsController(ILogger<ArticleDetailsController> logger, IConfiguration config, IArticleRepository articleRepository, IKeywordRepository keywordRepository)
         {
             _logger = logger;
             _config = config;
             _articleRepository = articleRepository;
+            _keywordRepository = keywordRepository;
         }
 
         // traverse the top stories and return the text
@@ -82,6 +85,7 @@ namespace talking_points.Controllers
                             URL = result.url,
                             Source = "NYTimes"
                         };
+                        
                         // check if the article is already in the database
                         var articleExists = await _articleRepository.GetByURL(articleDetails.URL);
                         if (articleExists != null)
@@ -90,6 +94,25 @@ namespace talking_points.Controllers
                             continue;
                         }
                         await _articleRepository.Insert(articleDetails);
+                        var keywords = result.adx_keywords.Split(';').ToList();
+                        if (keywords == null | keywords.Count == 0)
+                        {
+                            continue;
+                        }
+                        foreach (var keyword in keywords)
+                        {
+                            if (keyword.IsNullOrEmpty())
+                            {
+                                continue;
+                            }
+                            
+                            await _keywordRepository.Insert(new Keywords()
+                            {
+                                Id = Guid.NewGuid(),
+                                Keyword = keyword,
+                                ArticleId = articleDetails.Id
+                            });
+                        }
                         articleBody.Add(articleDetails);
                     }
                     // sleep 12 seconds for each api call
