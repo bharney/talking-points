@@ -95,7 +95,7 @@ namespace talking_points.Controllers
                         }
                         await _articleRepository.Insert(articleDetails);
                         var keywords = result.adx_keywords.Split(';').ToList();
-                        if (keywords == null | keywords.Count == 0)
+                        if (keywords == null | keywords?.Count == 0)
                         {
                             continue;
                         }

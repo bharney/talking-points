@@ -37,24 +37,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
 builder.Services.AddScoped<IKeywordRepository, KeywordRepository>();
-
-// AI Search init
-var searchEndpoint = builtConfig["SearchEndpoint"];
-var searchApiKey = builtConfig["SearchApiKey"];
-var searchIndexName = builtConfig["SearchIndexName"];
-
-if (!string.IsNullOrEmpty(searchEndpoint)
-    && !string.IsNullOrEmpty(searchApiKey)
-    && !string.IsNullOrEmpty(searchIndexName))
-{
-    builder.Services.AddSingleton(sp =>
-        new SearchClient(
-            new Uri(searchEndpoint),
-            searchIndexName,
-            new AzureKeyCredential(searchApiKey)
-        )
-    );
-}
+builder.Services.AddScoped<IArticleDetailsSearchClient, ArticleDetailsSearchClient>();
+builder.Services.AddScoped<IKeywordsSearchClient, KeywordsSearchClient>();
 
 builder.Services.AddRazorPages();
 
