@@ -1,5 +1,7 @@
+using Azure;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
+using Azure.Search.Documents;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +37,25 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
 builder.Services.AddScoped<IKeywordRepository, KeywordRepository>();
+
+// AI Search init
+var searchEndpoint = builtConfig["SearchEndpoint"];
+var searchApiKey = builtConfig["SearchApiKey"];
+var searchIndexName = builtConfig["SearchIndexName"];
+
+if (!string.IsNullOrEmpty(searchEndpoint)
+    && !string.IsNullOrEmpty(searchApiKey)
+    && !string.IsNullOrEmpty(searchIndexName))
+{
+    builder.Services.AddSingleton(sp =>
+        new SearchClient(
+            new Uri(searchEndpoint),
+            searchIndexName,
+            new AzureKeyCredential(searchApiKey)
+        )
+    );
+}
+
 builder.Services.AddRazorPages();
 
 builder.Services.AddCors(options =>

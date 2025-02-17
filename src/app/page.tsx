@@ -1,4 +1,5 @@
-import { CirclePackingChart } from "../components/circle-packing";
+import { CirclePackingChart } from "../components/CirclePacking";
+import { SearchForm } from "../components/SearchForm";
 
 export default function Home() {
   return (
@@ -17,6 +18,7 @@ export default function Home() {
             We take news articles from various sources and build word trees to
             visualize and link to news articles.
           </p>
+          <SearchForm />
         </div>
         <div className="fluid-container">
           <CirclePackingChart />
