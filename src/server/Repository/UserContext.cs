@@ -23,6 +23,7 @@ namespace talking_points.Repository
         private readonly IConfiguration _config;
         ApplicationUser _currentUser;
         private const string UserGuidCookiesName = "StarterPackUserGuid";
+        private const string talkingPointsCookiesName = "talking-points";
         private readonly IMemoryCache _cache;
         private const string MyModelCacheKey = "UserContext";
         private MemoryCacheEntryOptions cacheOptions;
@@ -115,8 +116,8 @@ namespace talking_points.Repository
                 Email = dummyEmail,
                 UserName = dummyEmail
             };
-           // await _userManager.CreateAsync(_currentUser, userPassword.ToString());
-           //  await _userManager.AddToRoleAsync(_currentUser, "Guest");
+            // await _userManager.CreateAsync(_currentUser, userPassword.ToString());
+            //  await _userManager.AddToRoleAsync(_currentUser, "Guest");
 
             return _currentUser;
         }
@@ -124,7 +125,9 @@ namespace talking_points.Repository
         public void RemoveUserGuidCookies()
         {
             _httpContext.Response.Cookies.Delete(UserGuidCookiesName);
+            _httpContext.Response.Cookies.Delete(talkingPointsCookiesName);
         }
+
 
         public void SetUserGuidCookies(Guid userGuid)
         {

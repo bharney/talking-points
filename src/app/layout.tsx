@@ -10,6 +10,7 @@ import Script from "next/script";
 import Footer from "./components/footer";
 import React from "react";
 import NavWrapper from "./components/nav-wrapper";
+import UserWrapper from "./components/user-context";
 
 const firaSansCondensed = Fira_Sans_Condensed({
   variable: "--font-fira-sans-condensed",
@@ -44,7 +45,9 @@ export default function RootLayout({
       <body
         className={`${firaSansCondensed.variable} ${fjallaOne.variable} ${playfairDisplay.variable} ${layoutStyles.bodyClassName} ${layoutStyles.padBody} container`}
       >
-        <NavWrapper>{children}</NavWrapper>
+        <UserWrapper>
+          <NavWrapper>{children}</NavWrapper>
+        </UserWrapper>
         <Footer />
         <Script
           src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"

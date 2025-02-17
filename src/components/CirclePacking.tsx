@@ -1,42 +1,40 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, memo } from "react";
 import { CirclePacking } from "@nivo/circle-packing";
 import { RootData, TreeViewModel } from "../app/models/models";
 import Loading from "../app/common/loading";
 import { useRouter } from "next/navigation";
 
-export const CirclePackingChart = () => {
+export const CirclePackingChart = memo(function CirclePackingChart() {
   const [tree, setTree] = useState<RootData | null>(null);
   const [zoomedId, setZoomedId] = useState<string | null>(null);
   const router = useRouter();
-  useEffect(() => {
-    async function loadArticles() {
-      const res = await fetch("https://localhost:7040/Home");
-      const treeViewModel = (await res.json()) as TreeViewModel[];
-      const transformData = (data: TreeViewModel[]) => {
-        return data
-          .filter((x) => x.keywords)
-          .map((d) => ({
-            name: d.articleDetails.title,
-            children: d.keywords.map((k) => ({
-              name: k.keyword,
-              loc: k.count,
-              color: "hsl(240, 6.20%, 22.20%)",
-            })),
-          }));
-      };
-      // Wrap the array in a root object.
-      setTree({
-        name: "Talking Points",
-        loc: 0,
-        color: "hsl(240, 6.20%, 22.20%)",
-        children: transformData(treeViewModel),
-      });
-    }
-    loadArticles();
-  }, []);
+  async function loadArticles() {
+    const res = await fetch("https://localhost:7040/Home");
+    const treeViewModel = (await res.json()) as TreeViewModel[];
+    const transformData = (data: TreeViewModel[]) => {
+      return data
+        .filter((x) => x.keywords)
+        .map((d) => ({
+          name: d.articleDetails.title,
+          children: d.keywords.map((k) => ({
+            name: k.keyword,
+            loc: k.count,
+            color: "hsl(240, 6.20%, 22.20%)",
+          })),
+        }));
+    };
+    // Wrap the array in a root object.
+    setTree({
+      name: "Talking Points",
+      loc: 0,
+      color: "hsl(240, 6.20%, 22.20%)",
+      children: transformData(treeViewModel),
+    });
+  }
+  loadArticles();
   // set width/height to 50vw, this needs to be calculated
-  let width = window?.innerWidth / 2;
+  let width = (window?.innerWidth ?? 1) / 2;
   // if mobile, set height to 25vh, else the fill the screen
   let height = window?.innerHeight / 2;
   if (window?.innerWidth < 768) {
@@ -85,4 +83,4 @@ export const CirclePackingChart = () => {
       />
     )
   );
-};
+});

@@ -12,11 +12,8 @@ export default function Home() {
         <div className="col">
           <p className="mb-4 hero-text">
             We are looking to find where talking points originate and
-            proliforate.
-          </p>
-          <p className="mb-4 hero-text">
-            We take news articles from various sources and build word trees to
-            visualize and link to news articles.
+            proliforate. We take news articles from various sources and build
+            word trees to visualize and link to news articles.
           </p>
           <SearchForm />
         </div>
