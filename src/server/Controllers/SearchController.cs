@@ -1,4 +1,5 @@
 ﻿using Azure.Search.Documents;
+using Azure.Search.Documents.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using talking_points.Models.ViewModel;
@@ -10,18 +11,20 @@ namespace talking_points.Controllers
     [Route("[controller]")]
     public class SearchController : Controller
     {
-        private readonly ILogger<ArticleDetailsController> _logger;
+        private readonly ILogger<SearchController> _logger;
         private readonly IConfiguration _config;
-        private SearchClient _client;
+        private IKeywordsSearchClient _keywordsSearchClient;
         private IArticleRepository _articleRepository;
         private IKeywordRepository _keywordRepository;
-        public SearchController(ILogger<ArticleDetailsController> logger, IConfiguration config, IArticleRepository articleRepository, IKeywordRepository keywordRepository, SearchClient searchClient)
+        private IArticleDetailsSearchClient _articleDetailsSearchClient;
+        public SearchController(ILogger<SearchController> logger, IConfiguration config, IArticleRepository articleRepository, IKeywordRepository keywordRepository, IKeywordsSearchClient keywordsSearchClient, IArticleDetailsSearchClient articleDetailsSearchClient)
         {
             _logger = logger;
             _config = config;
             _articleRepository = articleRepository;
             _keywordRepository = keywordRepository;
-            _client = searchClient;
+            _keywordsSearchClient = keywordsSearchClient;
+            _articleDetailsSearchClient = articleDetailsSearchClient;
         }
         [HttpGet]
         public async Task<IActionResult> Index(string searchPhrase)
@@ -32,12 +35,12 @@ namespace talking_points.Controllers
             }
 
             // get articles based on keyword search
-            async Task<List<ArticleDetails>> Search(string searchPhrase)
+            async Task<List<ArticleDetails>> Search(string query)
             {
-                var searchResults = await _client.SearchAsync<Keywords>(searchPhrase);
+                var searchKeywordResults = await _keywordsSearchClient.SearchAsync<Keywords>(query);
 
                 var articles = new List<ArticleDetails>();
-                await foreach (var result in searchResults.Value.GetResultsAsync())
+                await foreach (SearchResult<Keywords> result in searchKeywordResults.GetResultsAsync())
                 {
                     var article = await _articleRepository.Get(result.Document.ArticleId);
                     if (article != null)
@@ -45,8 +48,18 @@ namespace talking_points.Controllers
                         articles.Add(article);
                     }
                 }
+                var searchArticleResults = await _articleDetailsSearchClient.SearchAsync<ArticleDetails>(query);
+                await foreach (SearchResult<ArticleDetails> result in searchArticleResults.GetResultsAsync())
+                {
+                    var article = await _articleRepository.Get(result.Document.Id);
+                    if (article != null)
+                    {
+                        articles.Add(article);
+                    }
+                }
                 return articles;
             }
+
             var searchResults = await Search(searchPhrase);
             return Ok(searchResults);
         }
