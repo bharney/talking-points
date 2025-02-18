@@ -66,17 +66,11 @@ export default function NavMenu() {
                     </Link>
                   </li>
                 </ul>
-                <div className="d-none d-md-block d-lg-block d-xl-block">
-                  <ul className="navbar-nav">
-                    <li className="nav-item">
-                      <UserMenu />
-                    </li>
-                  </ul>
-                </div>
               </div>
-              <div className="d-inline-flex">
+              <div className="d-inline-flex align-items-center">
+                <UserMenu />
                 <button
-                  className="navbar-toggler navbar-toggler-right"
+                  className="navbar-toggler navbar-toggler-right ms-2"
                   onClick={toggle}
                   type="button"
                   data-target="#navbarsExampleDefault"

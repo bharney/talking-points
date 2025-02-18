@@ -11,6 +11,7 @@ import Footer from "./components/footer";
 import React from "react";
 import NavWrapper from "./components/nav-wrapper";
 import UserWrapper from "./components/user-context";
+import { CirclePackingProvider } from "./context/circle-packing-context";
 
 const firaSansCondensed = Fira_Sans_Condensed({
   variable: "--font-fira-sans-condensed",
@@ -46,7 +47,9 @@ export default function RootLayout({
         className={`${firaSansCondensed.variable} ${fjallaOne.variable} ${playfairDisplay.variable} ${layoutStyles.bodyClassName} ${layoutStyles.padBody} container`}
       >
         <UserWrapper>
-          <NavWrapper>{children}</NavWrapper>
+          <NavWrapper>
+            <CirclePackingProvider>{children}</CirclePackingProvider>
+          </NavWrapper>
         </UserWrapper>
         <Footer />
         <Script

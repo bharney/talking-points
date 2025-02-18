@@ -1,25 +1,30 @@
 "use server";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 export async function handleSignIn(formData: FormData) {
   const email = formData.get("email");
   const password = formData.get("password");
 
-  const response = await fetch("https://localhost:7040/Account/Login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      Email: email,
-      Password: password,
-      RememberMe: false,
-    }),
-  });
+  try {
+    const response = await fetch("https://localhost:7040/Account/Login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        Email: email,
+        Password: password,
+        RememberMe: false,
+      }),
+    });
 
-  if (response.ok) {
-    const jwt = await response.json();
-    (await cookies()).set("talking-points", jwt.token, { path: "/" });
-    redirect("/");
+    if (response.ok) {
+      const jwt = await response.json();
+      (await cookies()).set("talking-points", jwt.token, { path: "/" });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Sign-in error:", error);
+    return false;
   }
 }
 

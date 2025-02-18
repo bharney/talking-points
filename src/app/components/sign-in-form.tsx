@@ -1,10 +1,23 @@
 "use client";
 import Link from "next/link";
 import { handleSignIn } from "../common/auth-actions";
+import { useContext } from "react";
+import { UserContext } from "./user-context";
+import { redirect } from "next/navigation";
 
 export default function SignInForm() {
+  const { forceUpdate } = useContext(UserContext);
+
+  const handleSubmit = async (formData: FormData) => {
+    const success = await handleSignIn(formData);
+    if (success) {
+      forceUpdate();
+      redirect("/");
+    }
+  };
+
   return (
-    <form action={handleSignIn} method="post" className="form-wrapper">
+    <form action={handleSubmit} method="post" className="form-wrapper">
       <div className="form-label-group">
         <input
           name="email"

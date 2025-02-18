@@ -4,9 +4,8 @@ import { jwtDecode } from "jwt-decode";
 
 export const UserContext = React.createContext({
   authenticated: false,
-  user: {
-    email: "",
-  },
+  user: { email: "" },
+  forceUpdate: () => {},
 });
 
 const getCookies = function (): { [key: string]: string } {
@@ -39,6 +38,11 @@ export default function UserWrapper({
     authenticated: false,
     user: { email: "" },
   });
+  const [cookieUpdateCounter, setCookieUpdateCounter] = useState(0);
+
+  const forceUpdate = () => {
+    setCookieUpdateCounter((prev) => prev + 1);
+  };
 
   useEffect(() => {
     try {
@@ -52,9 +56,11 @@ export default function UserWrapper({
     } catch (error) {
       console.error("Error accessing cookies:", error);
     }
-  }, []);
+  }, [cookieUpdateCounter]); // Re-run when cookieUpdateCounter changes
 
   return (
-    <UserContext.Provider value={authState}>{children}</UserContext.Provider>
+    <UserContext.Provider value={{ ...authState, forceUpdate }}>
+      {children}
+    </UserContext.Provider>
   );
 }
