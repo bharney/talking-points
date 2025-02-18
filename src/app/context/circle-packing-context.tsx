@@ -26,8 +26,10 @@ export function CirclePackingProvider({
         return data
           .filter((x) => x.keywords)
           .map((d) => ({
+            id: d.articleDetails.id,
             name: d.articleDetails.title,
             children: d.keywords.map((k) => ({
+              id: k.id,
               name: k.keyword,
               loc: k.count,
               color: "hsl(240, 6.20%, 22.20%)",
@@ -35,6 +37,7 @@ export function CirclePackingProvider({
           }));
       };
       setTree({
+        id: "root",
         name: "Talking Points",
         loc: 0,
         color: "hsl(240, 6.20%, 22.20%)",
@@ -42,7 +45,7 @@ export function CirclePackingProvider({
       });
     }
     loadArticles();
-  }, []);
+  }, [tree]);
 
   return (
     <CirclePackingContext.Provider value={{ tree }}>

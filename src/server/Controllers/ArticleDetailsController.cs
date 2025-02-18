@@ -30,8 +30,6 @@ namespace talking_points.Controllers
 
         // traverse the top stories and return the text
         [HttpGet(Name = "GetNYTimesTopStories")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-
         public async Task<List<string>?> NYTimesTopStories()
         {
             _logger.LogInformation("WebScrapeNYTimesTopStories called");
@@ -105,7 +103,7 @@ namespace talking_points.Controllers
                         }
                         foreach (var keyword in keywords)
                         {
-                            if (keyword.IsNullOrEmpty())
+                            if (string.IsNullOrEmpty(keyword))
                             {
                                 continue;
                             }

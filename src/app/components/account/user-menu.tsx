@@ -6,11 +6,12 @@ import { useEffect, useState } from "react";
 
 export default function UserMenu() {
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
-    // Check if we have authentication cookie
-    const hasCookie = document.cookie.includes("talking-points=");
-    if (hasCookie) setIsLoading(false);
+    // This is a hack to prevent the flicker of the sign-in button on the client side.
+    // We don't have a better way to check if the user is authenticated on the client side yet.
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
   }, []);
 
   if (isLoading) {

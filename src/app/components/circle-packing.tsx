@@ -18,6 +18,7 @@ export const CirclePackingChart = memo(function CirclePackingChart() {
       return { width: window.innerWidth / 1.5, height: h };
     }
     return { width: w, height: h };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeof window !== "undefined" ? window.innerWidth : 0]);
 
   const commonProperties = useMemo(
@@ -45,10 +46,15 @@ export const CirclePackingChart = memo(function CirclePackingChart() {
         labelsFilter={(label) => label.node.height === 0}
         labelTextColor={{
           from: "color",
-          modifiers: [["darker", 2]],
+          modifiers: [["darker", 4]],
+        }}
+        borderWidth={1}
+        borderColor={{
+          from: "color",
+          modifiers: [["darker", 0.2]],
         }}
         zoomedId={zoomedId}
-        motionConfig="slow"
+        motionConfig="gentle"
         onClick={(node) => {
           setZoomedId(zoomedId === node.id ? null : node.id);
           router.push(`/details/${encodeURIComponent(node.id)}`);
@@ -56,14 +62,31 @@ export const CirclePackingChart = memo(function CirclePackingChart() {
         theme={{
           tooltip: {
             container: {
-              background: "#FFFFFF",
+              background: "#1f2937", // gray-800
+              color: "#f3f4f6", // gray-100
+              fontSize: "14px",
+              borderRadius: "6px",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.2)",
+              padding: "8px 12px",
             },
-            basic: {
-              color: "#000000",
+          },
+          labels: {
+            text: {
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: 0.3,
+              wordWrap: "break-word",
+              width: "60px",
+              textAlign: "center",
+              fill: "#f3f4f6",
             },
           },
         }}
         leavesOnly
+        colorBy="id"
+        isInteractive={true}
+        labelsSkipRadius={24}
+        animate={true}
       />
     )
   );

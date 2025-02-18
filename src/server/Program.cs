@@ -76,6 +76,7 @@ builder.Services.AddScoped<ICachedUserRepository<ApplicationUser>, CachedUserRep
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddTransient<DbSeeder>();
+builder.Services.AddSingleton<IRedisConnectionManager, RedisConnectionManager>();
 builder.Services.AddRazorPages();
 
 builder.Services.AddCors(options =>
