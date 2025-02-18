@@ -11,13 +11,6 @@ export default function SliderMenu() {
       {({ onUpdate }: NavProps) => (
         <React.Fragment>
           <Link
-            className="list-group-item"
-            href={"/portfolio"}
-            onClick={onUpdate}
-          >
-            Portfolio
-          </Link>
-          <Link
             className={"list-group-item"}
             href={"/about"}
             onClick={onUpdate}

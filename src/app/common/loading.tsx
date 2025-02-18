@@ -10,8 +10,8 @@ export default function Loading() {
         className="svg-inline--fa fa-w-16 fa-lg"
         size="1x"
         style={{
-          position: "absolute",
-          top: "50%",
+          position: "relative",
+          top: "30%",
           left: "50%",
           fontSize: "45px",
           color: "white",

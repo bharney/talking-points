@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Article, Keywords } from "../../models/models";
+import ArticleCard from "../../components/article";
 
 interface KeywordsViewModel {
   keywords: Keywords;
@@ -23,7 +24,7 @@ export default async function Page({
   };
   try {
     const res = await fetch(
-      `https://localhost:7040/Keyword?keyword=${keyword}`
+      `${process.env.NEXT_PUBLIC_API_URL}/Keyword?keyword=${keyword}`
     );
     keywordsViewModel = await res.json();
   } catch (error) {
@@ -33,9 +34,7 @@ export default async function Page({
     <div className="p-5 mb-4 rounded-3 text-white">
       <ul>
         {keywordsViewModel.articleDetails.map((article) => (
-          <li key={article.id}>
-            <Link href={article.url}>{article.title}</Link>
-          </li>
+          <ArticleCard key={article.id} article={article} />
         ))}
       </ul>
     </div>

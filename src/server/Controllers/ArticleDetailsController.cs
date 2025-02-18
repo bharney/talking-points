@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using System.Web;
 using talking_points.Repository;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 
 namespace talking_points.Controllers
 {
@@ -28,6 +30,8 @@ namespace talking_points.Controllers
 
         // traverse the top stories and return the text
         [HttpGet(Name = "GetNYTimesTopStories")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+
         public async Task<List<string>?> NYTimesTopStories()
         {
             _logger.LogInformation("WebScrapeNYTimesTopStories called");
