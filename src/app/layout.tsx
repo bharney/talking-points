@@ -7,10 +7,10 @@ import {
 import "./styles/index.scss";
 import layoutStyles from "./page.module.scss";
 import Script from "next/script";
-import Footer from "./components/footer";
+import Footer from "./common/footer";
 import React from "react";
-import NavWrapper from "./components/nav-wrapper";
-import UserWrapper from "./components/user-context";
+import NavWrapper from "./components/nav/nav-wrapper";
+import UserWrapper from "./components/account/user-context";
 import { CirclePackingProvider } from "./context/circle-packing-context";
 
 const firaSansCondensed = Fira_Sans_Condensed({

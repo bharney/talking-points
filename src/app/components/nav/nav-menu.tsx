@@ -2,7 +2,7 @@ import * as React from "react";
 import { NavContext } from "./nav-wrapper";
 import { useEffect } from "react";
 import Link from "next/link";
-import UserMenu from "./user-menu";
+import UserMenu from "../account/user-menu";
 
 interface NavProps {
   onUpdate: () => void;

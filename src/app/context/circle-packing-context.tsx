@@ -20,7 +20,7 @@ export function CirclePackingProvider({
   useEffect(() => {
     async function loadArticles() {
       if (tree) return; // Don't fetch if we already have data
-      const res = await fetch("https://localhost:7040/Home");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/Home`);
       const treeViewModel = (await res.json()) as TreeViewModel[];
       const transformData = (data: TreeViewModel[]) => {
         return data

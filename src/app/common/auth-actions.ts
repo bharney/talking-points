@@ -6,15 +6,18 @@ export async function handleSignIn(formData: FormData) {
   const password = formData.get("password");
 
   try {
-    const response = await fetch("https://localhost:7040/Account/Login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        Email: email,
-        Password: password,
-        RememberMe: false,
-      }),
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/Account/Login`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          Email: email,
+          Password: password,
+          RememberMe: false,
+        }),
+      }
+    );
 
     if (response.ok) {
       const jwt = await response.json();
@@ -30,7 +33,7 @@ export async function handleSignIn(formData: FormData) {
 
 export async function handleSignOut() {
   const token = (await cookies()).get("talking-points")?.value ?? "{}";
-  fetch("https://localhost:7040/Account/Logout", {
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/Account/Logout`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
