@@ -1,5 +1,5 @@
 import * as React from "react";
-import { handleSignOut } from "../common/auth-actions";
+import { handleSignOut } from "../services/auth-actions";
 export default async function Logout() {
   handleSignOut();
   return (

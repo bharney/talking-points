@@ -4,6 +4,7 @@ export interface TreeViewModel {
 }
 
 export interface RootData {
+  id: string;
   name: string;
   loc?: number;
   color?: string;
