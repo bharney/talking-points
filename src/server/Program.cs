@@ -11,6 +11,7 @@ using Microsoft.OpenApi.Models;
 using talking_points.Services;
 
 var allowLocalhost = "allowLocalhost";
+var allowServer = "allowServer";
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -20,16 +21,25 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// The secret is stored in the user secrets store
-new ConfigurationBuilder()
-    .AddUserSecrets<Program>()
-    .Build();
+
+
 var builtConfig = builder.Configuration;
+try
+{
+    var keyVaultEndpoint = new Uri(builtConfig["VaultEndpoint"]);
+    SecretClient secretClient = new SecretClient(keyVaultEndpoint, new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    {
+        ManagedIdentityClientId = builtConfig["ManagedIdentityClientId"]
+    }));
 
-var keyVaultEndpoint = new Uri(builtConfig["VaultEndpoint"]);
-var secretClient = new SecretClient(keyVaultEndpoint, new DefaultAzureCredential());
+    builder.Configuration.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error accessing Key Vault: {ex.Message}");
+    throw;
+}
 
-builder.Configuration.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
@@ -86,11 +96,21 @@ builder.Services.AddCors(options =>
                       {
                           policy.WithOrigins("http://localhost:3000").AllowCredentials().AllowAnyHeader();
                       });
+    options.AddPolicy(name: allowServer,
+                      policy =>
+                      {
+                          policy.WithOrigins("https://talkingpoints-bcfvg7ama7hehdaf.centralus-01.azurewebsites.net").AllowCredentials().AllowAnyHeader();
+                      });
+});
+builder.Services.AddApplicationInsightsTelemetry(new Microsoft.ApplicationInsights.AspNetCore.Extensions.ApplicationInsightsServiceOptions
+{
+    ConnectionString = builtConfig["APPLICATIONINSIGHTS_CONNECTION_STRING"]
 });
 
 var app = builder.Build();
 
 app.UseCors(allowLocalhost);
+app.UseCors(allowServer);
 app.UseHttpsRedirection();
 app.UseAuthorization();
 //include controllers

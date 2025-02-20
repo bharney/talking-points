@@ -33,7 +33,7 @@ namespace talking_points.Controllers
         public async Task<List<string>?> NYTimesTopStories()
         {
             _logger.LogInformation("WebScrapeNYTimesTopStories called");
-            var apiKey = _config.GetSection("apiKey").Value;
+            var apiKey = _config.GetSection("NYTimesApiKey").Value;
             // make an api call to NYTimes most popular articles endpoint
             Root articles = new Root();
             var articleBody = new List<ArticleDetails>();

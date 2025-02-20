@@ -11,13 +11,16 @@ export const CirclePackingChart = memo(function CirclePackingChart() {
   const router = useRouter();
 
   const { width, height } = useMemo(() => {
-    const w = (window?.innerWidth ?? 1) / 2;
-    let h = window?.innerHeight / 2;
-    if (window?.innerWidth < 768) {
-      h = window.innerHeight / 3;
-      return { width: window.innerWidth / 1.5, height: h };
+    if (typeof window !== "undefined" ? window.innerWidth : 0) {
+      const w = (window?.innerWidth ?? 1) / 2;
+      let h = window?.innerHeight / 2;
+      if (window?.innerWidth < 768) {
+        h = window.innerHeight / 3;
+        return { width: window.innerWidth / 1.5, height: h };
+      }
+      return { width: w, height: h };
     }
-    return { width: w, height: h };
+    return { width: 0, height: 0 };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeof window !== "undefined" ? window.innerWidth : 0]);
 
