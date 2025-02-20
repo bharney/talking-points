@@ -1,11 +1,14 @@
-import * as React from "react";
+// export async function generateStaticParams() {
+//   const posts = await getPostsFromDatabase(); // Function to fetch posts
+//   return posts.map((post) => ({
+//     slug: post.slug,
+//   }));
+// }
 
-export default function Page() {
+export default async function Page() {
   return (
-    <div className="p-5 mb-4 rounded-3 text-white">
-      <div className="container-fluid py-5">
-        <h1 className="display-5 fw-bold">Search results</h1>
-      </div>
+    <div className="p-5 mb-4 text-white">
+      <h1>Search</h1>
     </div>
   );
 }

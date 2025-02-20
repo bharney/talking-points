@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { handleSignIn } from "../../common/auth-actions";
+import { handleSignIn } from "../../services/auth-actions";
 import { useContext } from "react";
 import { UserContext } from "./user-context";
 import { redirect } from "next/navigation";

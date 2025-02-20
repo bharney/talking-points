@@ -30,12 +30,10 @@ namespace talking_points.Controllers
 
         // traverse the top stories and return the text
         [HttpGet(Name = "GetNYTimesTopStories")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-
         public async Task<List<string>?> NYTimesTopStories()
         {
             _logger.LogInformation("WebScrapeNYTimesTopStories called");
-            var apiKey = _config.GetSection("apiKey").Value;
+            var apiKey = _config.GetSection("NYTimesApiKey").Value;
             // make an api call to NYTimes most popular articles endpoint
             Root articles = new Root();
             var articleBody = new List<ArticleDetails>();
@@ -105,7 +103,7 @@ namespace talking_points.Controllers
                         }
                         foreach (var keyword in keywords)
                         {
-                            if (keyword.IsNullOrEmpty())
+                            if (string.IsNullOrEmpty(keyword))
                             {
                                 continue;
                             }
