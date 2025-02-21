@@ -32,8 +32,8 @@ jobs:
       - name: Build Backend Docker image
         run: |
           TIMESTAMP=$(date +%s)
-          docker build . \
-            --file src/server/Dockerfile.prod \
+          cd src/server && docker build . \
+            --file Dockerfile.prod \
             --tag talking-points-backend:$TIMESTAMP
       - name: Send Webhook for Backend
         run: |
