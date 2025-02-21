@@ -3,8 +3,6 @@ name: Docker Image CI
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
 
 jobs:
   build-frontend:
@@ -13,13 +11,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Frontend Docker image
         run: |
-          TIMESTAMP=$(date +%s)
           docker build . \
             --file Dockerfile \
-            --tag talking-points-frontend:$TIMESTAMP
+            --tag talking-points-frontend:latest
       - name: Send Webhook for Frontend
         run: |
-          TIMESTAMP=$(date +%s)
           curl -v -X POST \
             -H "Content-Type: application/json" \
             -d '{"image":"starterpackregistry.azurecr.io/talking-points-frontend","tag":"'"$TIMESTAMP"'"}' \
@@ -31,13 +27,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Backend Docker image
         run: |
-          TIMESTAMP=$(date +%s)
           cd src/server && docker build . \
             --file Dockerfile.prod \
-            --tag talking-points-backend:$TIMESTAMP
+            --tag talking-points-backend:latest
       - name: Send Webhook for Backend
         run: |
-          TIMESTAMP=$(date +%s)
           curl -v -X POST \
             -H "Content-Type: application/json" \
             -d '{"image":"starterpackregistry.azurecr.io/talking-points-backend","tag":"'"$TIMESTAMP"'"}' \
