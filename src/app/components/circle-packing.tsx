@@ -13,7 +13,7 @@ export const CirclePackingChart = memo(function CirclePackingChart() {
   const { width, height } = useMemo(() => {
     if (typeof window !== "undefined" ? window.innerWidth : 0) {
       const w = (window?.innerWidth ?? 1) / 2;
-      let h = window?.innerHeight / 2;
+      let h = window?.innerHeight;
       if (window?.innerWidth < 768) {
         h = window.innerHeight / 3;
         return { width: window.innerWidth / 1.5, height: h };
