@@ -3,42 +3,40 @@ name: Docker Image CI
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
 
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Docker login
+        run: |
+          echo "${{ secrets.AZURE_CREDENTIALS }}" | docker login -u ${{ secrets.AZURE_USERNAME }} --password-stdin starterpackregistry.azurecr.io
+
       - name: Build Frontend Docker image
         run: |
-          TIMESTAMP=$(date +%s)
-          docker build . \
-            --file Dockerfile \
-            --tag talking-points-frontend:$TIMESTAMP
-      - name: Send Webhook for Frontend
+          docker build \
+            -t starterpackregistry.azurecr.io/talking-points-frontend:latest \
+            -f Dockerfile .
+
+      - name: Push Frontend Docker image
         run: |
-          TIMESTAMP=$(date +%s)
-          curl -v -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"image":"talking-points-frontend","tag":"'"$TIMESTAMP"'"}' \
-            ${{ secrets.FRONTEND_WEBHOOK_URL }} || echo "Webhook call failed with status $?"
+          docker push starterpackregistry.azurecr.io/talking-points-frontend:latest
 
   build-backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Docker login
+        run: |
+          echo "${{ secrets.AZURE_CREDENTIALS }}" | docker login -u ${{ secrets.AZURE_USERNAME }} --password-stdin starterpackregistry.azurecr.io
+
       - name: Build Backend Docker image
         run: |
-          TIMESTAMP=$(date +%s)
-          cd src/server && docker build . \
-            --file Dockerfile.prod \
-            --tag talking-points-backend:$TIMESTAMP
-      - name: Send Webhook for Backend
+          cd src/server && docker build \
+            -t starterpackregistry.azurecr.io/talking-points-backend:latest \
+            -f Dockerfile.prod .
+
+      - name: Push Backend Docker image
         run: |
-          TIMESTAMP=$(date +%s)
-          curl -v -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"image":"talking-points-backend","tag":"'"$TIMESTAMP"'"}' \
-            ${{ secrets.BACKEND_WEBHOOK_URL }} || echo "Webhook call failed with status $?"
+          docker push starterpackregistry.azurecr.io/talking-points-backend:latest
