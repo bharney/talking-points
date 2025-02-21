@@ -7,30 +7,36 @@ using talking_points.Models;
 using talking_points.Repository;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.OpenApi.Models;
 using talking_points.Services;
 
 var allowLocalhost = "allowLocalhost";
 var allowServer = "allowServer";
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
-
 var builtConfig = builder.Configuration;
+
 try
 {
     var keyVaultEndpoint = new Uri(builtConfig["VaultEndpoint"]);
-    SecretClient secretClient = new SecretClient(keyVaultEndpoint, new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    SecretClient secretClient;
+
+    if (builder.Environment.IsDevelopment())
     {
-        ManagedIdentityClientId = builtConfig["ManagedIdentityClientId"]
-    }));
+        builder.Configuration.AddUserSecrets<Program>();
+        secretClient = new SecretClient(keyVaultEndpoint, new DefaultAzureCredential());
+    }
+    else
+    {
+        secretClient = new SecretClient(keyVaultEndpoint, new DefaultAzureCredential(new DefaultAzureCredentialOptions
+        {
+            ManagedIdentityClientId = builtConfig["ManagedIdentityClientId"]
+        }));
+    }
 
     builder.Configuration.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
 }
