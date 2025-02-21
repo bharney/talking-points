@@ -20,7 +20,7 @@ jobs:
         run: |
           curl -v -X POST \
             -H "Content-Type: application/json" \
-            -d '{"image":"starterpackregistry.azurecr.io/talking-points-frontend","tag":"'"$TIMESTAMP"'"}' \
+            -d '{"image":"starterpackregistry.azurecr.io/talking-points-frontend","tag":"latest"}' \
             ${{ secrets.FRONTEND_WEBHOOK_URL }} || echo "Webhook call failed with status $?"
 
   build-backend:
@@ -36,5 +36,5 @@ jobs:
         run: |
           curl -v -X POST \
             -H "Content-Type: application/json" \
-            -d '{"image":"starterpackregistry.azurecr.io/talking-points-backend","tag":"'"$TIMESTAMP"'"}' \
+            -d '{"image":"starterpackregistry.azurecr.io/talking-points-backend","tag":"latest"}' \
             ${{ secrets.BACKEND_WEBHOOK_URL }} || echo "Webhook call failed with status $?"
