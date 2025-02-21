@@ -11,30 +11,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Build Frontend Docker image
         run: |
-          docker build . \
-            --file Dockerfile \
-            --tag talking-points-frontend:latest
-      - name: Send Webhook for Frontend
-        run: |
-          curl -v -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"image":"starterpackregistry.azurecr.io/talking-points-frontend","tag":"latest"}' \
-            ${{ secrets.FRONTEND_WEBHOOK_URL }} || echo "Webhook call failed with status $?"
+          az acr build \
+            --image talking-points-frontend:latest \
+            --registry starterpackregistry \
+            --file Dockerfile .
 
   build-backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Build Backend Docker image
         run: |
-          cd src/server && docker build . \
-            --file Dockerfile.prod \
-            --tag talking-points-backend:latest
-      - name: Send Webhook for Backend
-        run: |
-          curl -v -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"image":"starterpackregistry.azurecr.io/talking-points-backend","tag":"latest"}' \
-            ${{ secrets.BACKEND_WEBHOOK_URL }} || echo "Webhook call failed with status $?"
+          az acr build \
+            --image talking-points-backend:latest \
+            --registry starterpackregistry \
+            --file src/server/Dockerfile.prod .
