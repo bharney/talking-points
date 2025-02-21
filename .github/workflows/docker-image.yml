@@ -22,7 +22,7 @@ jobs:
           TIMESTAMP=$(date +%s)
           curl -v -X POST \
             -H "Content-Type: application/json" \
-            -d '{"image":"talking-points-frontend","tag":"'"$TIMESTAMP"'"}' \
+            -d '{"image":"starterpackregistry.azurecr.io/talking-points-frontend","tag":"'"$TIMESTAMP"'"}' \
             ${{ secrets.FRONTEND_WEBHOOK_URL }} || echo "Webhook call failed with status $?"
 
   build-backend:
@@ -40,5 +40,5 @@ jobs:
           TIMESTAMP=$(date +%s)
           curl -v -X POST \
             -H "Content-Type: application/json" \
-            -d '{"image":"talking-points-backend","tag":"'"$TIMESTAMP"'"}' \
+            -d '{"image":"starterpackregistry.azurecr.io/talking-points-backend","tag":"'"$TIMESTAMP"'"}' \
             ${{ secrets.BACKEND_WEBHOOK_URL }} || echo "Webhook call failed with status $?"
