@@ -6,12 +6,12 @@ import {
 } from "next/font/google";
 import "./styles/index.scss";
 import layoutStyles from "./page.module.scss";
-import Script from "next/script";
 import Footer from "./common/footer";
 import React from "react";
 import NavWrapper from "./components/nav/nav-wrapper";
 import UserWrapper from "./components/account/user-context";
 import { CirclePackingProvider } from "./context/circle-packing-context";
+import BootstrapClient from "./components/bootstrap-client";
 
 const firaSansCondensed = Fira_Sans_Condensed({
   variable: "--font-fira-sans-condensed",
@@ -52,16 +52,7 @@ export default function RootLayout({
           </NavWrapper>
         </UserWrapper>
         <Footer />
-        <Script
-          src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
-          integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
-          crossOrigin="anonymous"
-        ></Script>
-        <Script
-          src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"
-          integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy"
-          crossOrigin="anonymous"
-        ></Script>
+        <BootstrapClient />
       </body>
     </html>
   );
