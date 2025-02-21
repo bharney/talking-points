@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Docker login
         run: |
-          docker login -u ${{ secrets.AZURE_USERNAME }} --password-stdin ${{ secrets.AZURE_CREDENTIALS }} starterpackregistry.azurecr.io
+          docker login -u ${{ secrets.AZURE_USERNAME }} -p --password-stdin ${{ secrets.AZURE_CREDENTIALS }} starterpackregistry.azurecr.io
 
       - name: Build Frontend Docker image
         run: |
@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Docker login
         run: |
-          docker login -u ${{ secrets.AZURE_USERNAME }} --password-stdin ${{ secrets.AZURE_CREDENTIALS }} starterpackregistry.azurecr.io
+          docker login -u ${{ secrets.AZURE_USERNAME }} -p --password-stdin ${{ secrets.AZURE_CREDENTIALS }} starterpackregistry.azurecr.io
 
       - name: Build Backend Docker image
         run: |
