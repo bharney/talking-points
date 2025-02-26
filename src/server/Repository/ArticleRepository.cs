@@ -60,6 +60,23 @@ namespace talking_points.Repository
             return article;
         }
 
+        public async Task<IEnumerable<ArticleDetails>> GetRange(List<Guid> ids)
+        {
+            var cacheKey = $"ArticleDetails:GetRange:{string.Join(",", ids)}";
+            var cachedData = await _cache.StringGetAsync(cacheKey);
+            if (!string.IsNullOrEmpty(cachedData))
+            {
+                return JsonSerializer.Deserialize<IEnumerable<ArticleDetails>>(cachedData, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web));
+            }
+
+            var articles = await _Context.Set<ArticleDetails>().Where(article => ids.Contains(article.Id)).ToListAsync();
+            if (articles != null && articles.Any())
+            {
+                await _cache.StringSetAsync(cacheKey, JsonSerializer.Serialize(articles, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }), TimeSpan.FromMinutes(10));
+            }
+            return articles;
+        }
+
         public async Task<ArticleDetails> Insert(ArticleDetails article)
         {
             await _Context.Set<ArticleDetails>().AddAsync(article);

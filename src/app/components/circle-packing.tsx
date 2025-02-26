@@ -60,7 +60,9 @@ export const CirclePackingChart = memo(function CirclePackingChart() {
         motionConfig="gentle"
         onClick={(node) => {
           setZoomedId(zoomedId === node.id ? null : node.id);
-          router.push(`/details/${encodeURIComponent(node.id)}`);
+          router.push(
+            `/details/${encodeURIComponent(node.id)}?page=1&pageSize=10`
+          );
         }}
         theme={{
           tooltip: {
