@@ -7,9 +7,10 @@ using System.Threading.Tasks;
 using Azure.Identity;
 using StackExchange.Redis;
 using talking_points.Models;
-using Newtonsoft.Json;
 using Microsoft.Extensions.Configuration;
 using talking_points.Services;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace talking_points.Repository
 {
@@ -35,11 +36,11 @@ namespace talking_points.Repository
             var cachedData = await _cache.StringGetAsync(cacheKey);
             if (!string.IsNullOrEmpty(cachedData))
             {
-                return JsonConvert.DeserializeObject<IEnumerable<ArticleDetails>>(cachedData);
+                return JsonSerializer.Deserialize<IEnumerable<ArticleDetails>>(cachedData, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web));
             }
 
             var articles = await _Context.Set<ArticleDetails>().ToListAsync();
-            await _cache.StringSetAsync(cacheKey, JsonConvert.SerializeObject(articles), TimeSpan.FromMinutes(10));
+            await _cache.StringSetAsync(cacheKey, JsonSerializer.Serialize(articles, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web)), TimeSpan.FromMinutes(10));
             return articles;
         }
 
@@ -49,13 +50,13 @@ namespace talking_points.Repository
             var cachedData = await _cache.StringGetAsync(cacheKey);
             if (!string.IsNullOrEmpty(cachedData))
             {
-                return JsonConvert.DeserializeObject<ArticleDetails>(cachedData);
+                return JsonSerializer.Deserialize<ArticleDetails>(cachedData, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web));
             }
 
             var article = await _Context.Set<ArticleDetails>().FindAsync(id);
             if (article != null)
             {
-                await _cache.StringSetAsync(cacheKey, JsonConvert.SerializeObject(article), TimeSpan.FromMinutes(10));
+                await _cache.StringSetAsync(cacheKey, JsonSerializer.Serialize(article, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web)), TimeSpan.FromMinutes(10));
             }
             return article;
         }
@@ -119,13 +120,13 @@ namespace talking_points.Repository
             var cachedData = await _cache.StringGetAsync(cacheKey);
             if (!string.IsNullOrEmpty(cachedData))
             {
-                return JsonConvert.DeserializeObject<ArticleDetails>(cachedData);
+                return JsonSerializer.Deserialize<ArticleDetails>(cachedData, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web));
             }
 
             var article = await _Context.Set<ArticleDetails>().FirstOrDefaultAsync(x => x.URL == URL);
             if (article != null)
             {
-                await _cache.StringSetAsync(cacheKey, JsonConvert.SerializeObject(article), TimeSpan.FromMinutes(10));
+                await _cache.StringSetAsync(cacheKey, JsonSerializer.Serialize(article, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web)), TimeSpan.FromMinutes(10));
             }
             return article;
         }

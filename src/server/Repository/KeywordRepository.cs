@@ -8,7 +8,8 @@ using Azure.Identity;
 using StackExchange.Redis;
 using talking_points.Models;
 using talking_points.Services;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace talking_points.Repository
 {
@@ -34,11 +35,11 @@ namespace talking_points.Repository
             var cachedData = await _cache.StringGetAsync(cacheKey);
             if (!string.IsNullOrEmpty(cachedData))
             {
-                return JsonConvert.DeserializeObject<IEnumerable<Keywords>>(cachedData);
+                return JsonSerializer.Deserialize<IEnumerable<Keywords>>(cachedData, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web));
             }
 
             var keywords = await _Context.Set<Keywords>().ToListAsync();
-            await _cache.StringSetAsync(cacheKey, JsonConvert.SerializeObject(keywords), TimeSpan.FromMinutes(10));
+            await _cache.StringSetAsync(cacheKey, JsonSerializer.Serialize(keywords, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web)), TimeSpan.FromMinutes(10));
             return keywords;
         }
 
@@ -48,7 +49,7 @@ namespace talking_points.Repository
             var cachedData = await _cache.StringGetAsync(cacheKey);
             if (!string.IsNullOrEmpty(cachedData))
             {
-                return JsonConvert.DeserializeObject<List<Keywords>>(cachedData);
+                return JsonSerializer.Deserialize<List<Keywords>>(cachedData, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web));
             }
 
             var keywords = await _Context.Set<Keywords>().ToListAsync();
@@ -56,7 +57,7 @@ namespace talking_points.Repository
 
             if (filteredKeywords.Any())
             {
-                await _cache.StringSetAsync(cacheKey, JsonConvert.SerializeObject(filteredKeywords), TimeSpan.FromMinutes(10));
+                await _cache.StringSetAsync(cacheKey, JsonSerializer.Serialize(filteredKeywords, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web)), TimeSpan.FromMinutes(10));
             }
             return filteredKeywords;
         }

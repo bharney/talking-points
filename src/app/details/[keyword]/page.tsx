@@ -9,13 +9,15 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ keyword: string }>;
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { keyword } = await params;
-  const page = Number(searchParams.page) || 1;
-  const pageSize = Number(searchParams.pageSize) || 10;
-
-  const keywordsViewModel = await getKeywordDetails(keyword, page, pageSize);
+  const { page, pageSize } = await searchParams;
+  const keywordsViewModel = await getKeywordDetails(
+    keyword,
+    Number(page) || 1,
+    Number(pageSize) || 10
+  );
 
   return (
     <div>
