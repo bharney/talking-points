@@ -46,7 +46,7 @@ export default function Home() {
           />
           <Image
             className="rounded-end-3"
-            src="/images/hero.jpg"
+            src="/images/hero.webp"
             alt="Hero image"
             fill
             style={{
