@@ -9,6 +9,7 @@ namespace talking_points.Repository
     {
         Task<IEnumerable<ArticleDetails>> GetAll();
         Task<ArticleDetails> Get(Guid id);
+        Task<IEnumerable<ArticleDetails>> GetRange(List<Guid> ids);
         Task<ArticleDetails> Insert(ArticleDetails article);
         Task<bool> Update(ArticleDetails article);
         Task<bool> Delete(Guid id);

@@ -12,6 +12,6 @@ namespace talking_points.Repository
         Task<Keywords> Insert(Keywords keyword);
         Task<bool> Update(Keywords keyword);
         Task<bool> Delete(Guid id);
-
+        Task<List<Keywords>> GetByKeywordText(string keyword);
     }
 }

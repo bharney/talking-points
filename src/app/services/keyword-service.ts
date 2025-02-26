@@ -1,11 +1,13 @@
 import { KeywordsViewModel } from "../models/view-models";
 
 export async function getKeywordDetails(
-  keyword: string
+  keyword: string,
+  page: number,
+  pageSize: number
 ): Promise<KeywordsViewModel> {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/Keyword?keyword=${keyword}`
+      `${process.env.NEXT_PUBLIC_API_URL}/Keyword?keyword=${keyword}&page=${page}&pageSize=${pageSize}`
     );
     return await res.json();
   } catch (error) {
@@ -17,7 +19,11 @@ export async function getKeywordDetails(
         articleId: "0",
         count: 0,
       },
-      articleDetails: [],
+      articles: [],
+      totalArticles: 0,
+      page: page,
+      pageSize: pageSize,
+      totalPages: 0,
     };
   }
 }

@@ -105,5 +105,32 @@ namespace talking_points.Repository
                 await _cache.KeyDeleteAsync(key);
             }
         }
+
+        public async Task<List<Keywords>> GetByKeywordText(string keyword)
+        {
+            var cacheKey = $"Keywords:ByText:{keyword}";
+            var cachedData = await _cache.StringGetAsync(cacheKey);
+            if (!string.IsNullOrEmpty(cachedData))
+            {
+                return JsonSerializer.Deserialize<List<Keywords>>(cachedData, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web));
+            }
+
+            var keywords = await _Context.Set<Keywords>()
+                .ToListAsync(); // Fetch all keywords first
+
+            var filteredKeywords = keywords
+                .Where(k => k.Keyword.Equals(keyword, StringComparison.OrdinalIgnoreCase))
+                .ToList(); // Apply the filter in memory
+
+            if (filteredKeywords.Any())
+            {
+                await _cache.StringSetAsync(
+                    cacheKey, 
+                    JsonSerializer.Serialize(filteredKeywords, new JsonSerializerOptions(defaults: JsonSerializerDefaults.Web)), 
+                    TimeSpan.FromMinutes(10));
+            }
+
+            return filteredKeywords;
+        }
     }
 }
