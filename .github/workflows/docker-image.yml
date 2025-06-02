@@ -11,6 +11,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Create and use buildx builder
@@ -33,6 +35,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Create and use buildx builder
