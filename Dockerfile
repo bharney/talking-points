@@ -1,4 +1,4 @@
-FROM node:latest AS builder
+FROM node:18-alpine AS builder
 WORKDIR /talking-points
 COPY package*.json ./
 RUN npm install
@@ -6,7 +6,7 @@ COPY . .
 
 RUN npm run build
 
-FROM --platform=linux/arm64 arm64v8/node:lts-alpine
+FROM node:18-alpine
 WORKDIR /talking-points
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
