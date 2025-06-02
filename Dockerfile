@@ -1,4 +1,4 @@
-FROM node:latest AS builder
+FROM --platform=linux/arm64 arm64v8/node:lts-alpine AS builder
 WORKDIR /talking-points
 COPY package*.json ./
 RUN npm install
