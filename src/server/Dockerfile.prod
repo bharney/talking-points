@@ -16,6 +16,9 @@ FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./talking-points.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
+# Debug: print architecture
+RUN uname -m
+
 FROM base AS final
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
