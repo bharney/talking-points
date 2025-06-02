@@ -16,18 +16,21 @@ import BootstrapClient from "./components/bootstrap-client";
 const firaSansCondensed = Fira_Sans_Condensed({
   variable: "--font-fira-sans-condensed",
   subsets: ["latin"],
+  display: "swap",
   weight: "600",
 });
 
 const fjallaOne = Fjalla_One({
   variable: "--font-fjalla-one",
   subsets: ["latin"],
+  display: "swap",
   weight: "400",
 });
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair-display",
   subsets: ["latin"],
+  display: "swap",
   weight: "400",
 });
 
