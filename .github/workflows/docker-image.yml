@@ -33,7 +33,7 @@ jobs:
 
       - name: Build Backend Docker image
         run: |
-          cd src/server && docker buildx build --platform linux/amd64 \
+          cd src/server && docker buildx build --platform linux/arm64 \
             -t starterpackregistry.azurecr.io/talking-points-backend:latest \
             -f Dockerfile.prod .
 
