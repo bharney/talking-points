@@ -6,7 +6,7 @@ RUN dotnet restore "./talking-points.csproj"
 COPY . .
 RUN dotnet publish "./talking-points.csproj" -c Release -r linux-arm64 --self-contained false -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-arm64 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
 COPY --from=build /app/publish .
