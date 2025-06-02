@@ -15,7 +15,7 @@ jobs:
 
       - name: Build Frontend Docker image
         run: |
-          docker buildx build --platform linux/arm64 \
+          docker build \
             -t starterpackregistry.azurecr.io/talking-points-frontend:latest \
             -f Dockerfile .
 
