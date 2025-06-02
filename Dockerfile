@@ -6,7 +6,7 @@ COPY . .
 
 RUN npm run build
 
-FROM arm64v8/node:lts-alpine
+FROM --platform=linux/arm64 arm64v8/node:lts-alpine
 WORKDIR /talking-points
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
