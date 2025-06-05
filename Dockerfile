@@ -3,7 +3,7 @@ WORKDIR /talking-points
 COPY package*.json ./
 RUN npm install
 COPY . .
-
+RUN rm -rf ./src/server
 RUN npm run build
 
 FROM node:lts-alpine

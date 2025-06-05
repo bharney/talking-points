@@ -51,13 +51,18 @@
         "pipeArgs": [
           "exec",
           "-i",
-          "talking-points-backend-5cb54c9574-t8646",
+          "talking-points-backend-6b975b6fff-d79pq",
           "--"
         ],
         "debuggerPath": "/remote_debugger/vsdbg",
         "args": ["--interpreter=vscode"],
-        "quoteArgs": false,
-        "requireExactSource": false
+        "quoteArgs": false
+      },
+      "requireExactSource": true,
+      "justMyCode": false,
+      "sourceFileMap": {
+        "/src/server": "${workspaceFolder}/src/server",
+        "/app": "${workspaceFolder}/src/server"
       }
     }
   ]

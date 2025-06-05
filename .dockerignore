@@ -4,5 +4,7 @@ node_modules
 npm-debug.log
 .next
 .git
-src/server
 .env.local
+bin
+obj
+*.log
