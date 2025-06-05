@@ -35,6 +35,6 @@ jobs:
           echo "${{ secrets.AZURE_CREDENTIALS }}" | docker login -u ${{ secrets.AZURE_USERNAME }} --password-stdin starterpackregistry.azurecr.io
       - name: Build Backend Docker image
         run: |
-          cd src/server && docker buildx build --platform linux/amd64 \
+          docker buildx build --platform linux/amd64 \
             -t starterpackregistry.azurecr.io/talking-points-backend:latest \
-            -f Dockerfile.prod . --push
+            -f src/server/Dockerfile.prod . --push
