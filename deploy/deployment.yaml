@@ -24,7 +24,7 @@ spec:
               name: http-frontend
           env:
             - name: NEXT_PUBLIC_API_URL
-              value: "http://talking-points-backend:8080"
+              value: "https://57.152.13.45"
           resources:
             requests:
               cpu: 100m
