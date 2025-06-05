@@ -1,0 +1,14 @@
+# filepath: c:\Users\brharney\allow-egress-to-sql-redis.yml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-sql-redis
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: talking-points-backend
+  policyTypes:
+    - Egress
+  egress:
+    - {}
