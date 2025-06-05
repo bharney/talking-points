@@ -1,16 +1,13 @@
 # Production Dockerfile
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["talking-points.csproj", "./"]
+WORKDIR /src/server
+COPY src/server/talking-points.csproj ./
 RUN dotnet restore "./talking-points.csproj"
-COPY . .
-RUN dotnet publish "./talking-points.csproj" -c Debug -r linux-x64 --self-contained false -o /app/publish
+COPY src/server/. ./
+RUN dotnet publish "./talking-points.csproj" -c Release -r linux-x64 --self-contained false -o ./publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
-COPY --from=build /app/publish .
+COPY --from=build /src/server/publish .
 ENTRYPOINT ["dotnet", "talking-points.dll"]
-
-RUN apt-get update && apt-get install -y curl && \
-    curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l /remote_debugger
