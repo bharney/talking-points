@@ -40,6 +40,25 @@
         "uriFormat": "%s",
         "webRoot": "${workspaceFolder}"
       }
+    },
+    {
+      "name": ".NET Core Remote Attach",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "1",
+      "pipeTransport": {
+        "pipeProgram": "c:/ProgramData/chocolatey/bin/kubectl",
+        "pipeArgs": [
+          "exec",
+          "-i",
+          "talking-points-backend-5cb54c9574-t8646",
+          "--"
+        ],
+        "debuggerPath": "/remote_debugger/vsdbg",
+        "args": ["--interpreter=vscode"],
+        "quoteArgs": false,
+        "requireExactSource": false
+      }
     }
   ]
 }
