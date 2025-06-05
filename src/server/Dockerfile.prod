@@ -1,11 +1,10 @@
-
 # Production Dockerfile
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY ["talking-points.csproj", "./"]
 RUN dotnet restore "./talking-points.csproj"
 COPY . .
-RUN dotnet publish "./talking-points.csproj" -c Release -r linux-x64 --self-contained false -o /app/publish
+RUN dotnet publish "./talking-points.csproj" -c Debug -r linux-x64 --self-contained false -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
