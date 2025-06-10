@@ -1,0 +1,58 @@
+{{- if .Values.azureWorkloadIdentity.webhook.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: azure-wi-webhook-cert-generator
+  namespace: kube-system
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: azure-wi-webhook-cert-generator
+    spec:
+      serviceAccountName: azure-wi-webhook-admin
+      restartPolicy: OnFailure
+      containers:
+        - name: cert-generator
+          image: mcr.microsoft.com/oss/kubernetes/kubectl:v1.28.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              
+              # Generate private key
+              openssl genrsa -out ca.key 2048
+              
+              # Generate CA certificate
+              openssl req -new -x509 -days 365 -key ca.key -out ca.crt -subj "/CN=azure-wi-webhook-ca"
+              
+              # Generate webhook private key
+              openssl genrsa -out webhook.key 2048
+              
+              # Generate certificate signing request
+              openssl req -new -key webhook.key -out webhook.csr -subj "/CN=azure-wi-webhook-webhook-service.kube-system.svc"
+              
+              # Generate webhook certificate
+              openssl x509 -req -in webhook.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out webhook.crt -days 365 -extensions v3_req -extfile <(echo "[v3_req]"; echo "subjectAltName=DNS:azure-wi-webhook-webhook-service.kube-system.svc,DNS:azure-wi-webhook-webhook-service.kube-system.svc.cluster.local")
+              
+              # Create or update the secret
+              kubectl create secret tls azure-wi-webhook-cert \
+                --cert=webhook.crt \
+                --key=webhook.key \
+                --namespace=kube-system \
+                --dry-run=client -o yaml | kubectl apply -f -
+              
+              # Get the CA bundle for the webhook configuration
+              CA_BUNDLE=$(cat ca.crt | base64 -w 0)
+              
+              # Update the MutatingAdmissionWebhook with the CA bundle
+              kubectl patch mutatingadmissionwebhook azure-wi-webhook-mutating-webhook \
+                --type='json' \
+                -p="[{\"op\": \"replace\", \"path\": \"/webhooks/0/clientConfig/caBundle\", \"value\": \"$CA_BUNDLE\"}]" || true
+              
+              echo "Certificates generated and webhook configured successfully"
+{{- end }}

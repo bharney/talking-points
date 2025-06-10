@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: { { .Values.frontend.name } }
+  namespace: { { .Values.global.namespace } }
+spec:
+  replicas: { { .Values.frontend.replicaCount } }
+  selector:
+    matchLabels:
+      app: { { .Values.frontend.name } }
+  template:
+    metadata:
+      labels:
+        app: { { .Values.frontend.name } }
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: { { .Values.serviceAccount.name } }
+      nodeSelector: { { - toYaml .Values.nodeSelector | nindent 8 } }
+      containers:
+        - name: frontend
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          imagePullPolicy: { { .Values.frontend.image.pullPolicy } }
+          ports:
+            - containerPort: { { .Values.frontend.service.targetPort } }
+              name: http-frontend
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: { { .Values.frontend.env.NEXT_PUBLIC_API_URL | quote } }
+          resources: { { - toYaml .Values.frontend.resources | nindent 12 } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: { { .Values.frontend.service.name } }
+  namespace: { { .Values.global.namespace } }
+spec:
+  type: { { .Values.frontend.service.type } }
+  selector:
+    app: { { .Values.frontend.name } }
+  ports:
+    - protocol: TCP
+      port: { { .Values.frontend.service.ports.http } }
+      targetPort: { { .Values.frontend.service.targetPort } }
+      name: http-frontend
+    - protocol: TCP
+      port: { { .Values.frontend.service.ports.https } }
+      targetPort: { { .Values.frontend.service.targetPort } }
+      name: https-frontend

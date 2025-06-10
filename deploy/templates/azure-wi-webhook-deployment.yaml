@@ -1,0 +1,82 @@
+{{- if .Values.azureWorkloadIdentity.webhook.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-wi-webhook-controller-manager
+  namespace: kube-system
+  labels:
+    app: workload-identity-webhook
+    azure-workload-identity.io/system: "true"
+spec:
+  replicas: {{ .Values.azureWorkloadIdentity.webhook.replicas | default 2 }}
+  selector:
+    matchLabels:
+      app: workload-identity-webhook
+      azure-workload-identity.io/system: "true"
+  template:
+    metadata:
+      labels:
+        app: workload-identity-webhook
+        azure-workload-identity.io/system: "true"
+        kubernetes.azure.com/managedby: aks
+    spec:
+      serviceAccountName: azure-wi-webhook-admin
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+        - name: manager
+          image: {{ .Values.azureWorkloadIdentity.webhook.image }}
+          imagePullPolicy: Always
+          args:
+            - --log-level={{ .Values.azureWorkloadIdentity.webhook.logLevel | default "info" }}
+            - --metrics-addr=0.0.0.0:8080
+            - --webhook-port=9443
+            - --webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs
+            - --arch=amd64
+          ports:
+            - containerPort: 9443
+              name: webhook-server
+              protocol: TCP
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+          volumeMounts:
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+      securityContext:
+        runAsNonRoot: true
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: azure-wi-webhook-cert
+{{- end }}

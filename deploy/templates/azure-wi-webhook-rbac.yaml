@@ -1,4 +1,4 @@
-# Create or update this file as azure-wi-webhook-rbac.yaml and apply it
+{{- if .Values.azureWorkloadIdentity.webhook.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -8,6 +8,15 @@ rules:
     resources:
       ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -21,3 +30,10 @@ subjects:
   - kind: ServiceAccount
     name: azure-wi-webhook-admin
     namespace: kube-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: azure-wi-webhook-admin
+  namespace: kube-system
+{{- end }}
