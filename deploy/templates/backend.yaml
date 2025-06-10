@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: { { .Values.backend.name } }
+  namespace: { { .Values.global.namespace } }
+spec:
+  replicas: { { .Values.backend.replicaCount } }
+  selector:
+    matchLabels:
+      app: { { .Values.backend.name } }
+  template:
+    metadata:
+      labels:
+        app: { { .Values.backend.name } }
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: { { .Values.serviceAccount.name } }
+      nodeSelector: { { - toYaml .Values.nodeSelector | nindent 8 } }
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: { { .Values.backend.image.pullPolicy } }
+          env:
+            - name: AZURE_CLIENT_ID
+              value: { { .Values.backend.env.AZURE_CLIENT_ID | quote } }
+            - name: AZURE_TENANT_ID
+              value: { { .Values.backend.env.AZURE_TENANT_ID | quote } }
+            - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+              value:
+                {
+                  {
+                    .Values.backend.env.APPLICATIONINSIGHTS_CONNECTION_STRING | quote,
+                  },
+                }
+          ports:
+            - containerPort: { { .Values.backend.service.targetPort } }
+              name: http-backend
+          resources: { { - toYaml .Values.backend.resources | nindent 12 } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: { { .Values.backend.service.name } }
+  namespace: { { .Values.global.namespace } }
+spec:
+  type: { { .Values.backend.service.type } }
+  selector:
+    app: { { .Values.backend.name } }
+  ports:
+    - protocol: TCP
+      port: { { .Values.backend.service.port } }
+      targetPort: { { .Values.backend.service.targetPort } }
+      name: http-backend
+    - protocol: TCP
+      port: 4020
+      targetPort: 4020
+      name: vsdbg
