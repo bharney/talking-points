@@ -1,0 +1,45 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.networkPolicy.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.networkPolicy.backend.app }}
+  policyTypes:
+    - Egress
+  egress:
+    {{- if .Values.networkPolicy.egress.sql.enabled }}
+    # Allow egress to Azure SQL
+    {{- range .Values.networkPolicy.egress.sql.cidrs }}
+    - to:
+        - ipBlock:
+            cidr: {{ . }}
+      ports:
+        - protocol: TCP
+          port: {{ $.Values.networkPolicy.egress.sql.port }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.redis.enabled }}
+    # Allow egress to Azure Redis
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.egress.redis.cidr }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.egress.redis.port }}
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.dns.enabled }}
+    # Allow DNS resolution
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.egress.dns.cidr }}
+      ports:
+        - protocol: UDP
+          port: {{ .Values.networkPolicy.egress.dns.ports.udp }}
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.egress.dns.ports.tcp }}
+    {{- end }}
+{{- end }}

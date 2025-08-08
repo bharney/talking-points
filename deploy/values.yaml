@@ -1,0 +1,142 @@
+# Default values for talking-points chart
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  namespace: default
+
+# Service Account configuration
+serviceAccount:
+  name: backend-identity
+  annotations:
+    azure.workload.identity/client-id: "d1d77241-f18a-4ac0-8e89-5ff078c30050"
+
+# Frontend configuration
+frontend:
+  name: talking-points-frontend
+  replicaCount: 1
+  image:
+    repository: starterpackregistry.azurecr.io/talking-points-frontend
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    name: talking-points-service
+    type: LoadBalancer
+    ports:
+      http: 80
+      https: 443
+    targetPort: 3000
+
+  env:
+    NEXT_PUBLIC_API_URL: "http://talking-points-backend:8080"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# Backend configuration
+backend:
+  name: talking-points-backend
+  replicaCount: 1
+  image:
+    repository: starterpackregistry.azurecr.io/talking-points-backend
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    name: talking-points-backend
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+
+  env:
+    AZURE_CLIENT_ID: "d1d77241-f18a-4ac0-8e89-5ff078c30050"
+    AZURE_TENANT_ID: "32e1d8d3-bc39-4b94-9c4d-4192d41b2a63"
+    APPLICATIONINSIGHTS_CONNECTION_STRING: "InstrumentationKey=072a8d07-3f1c-4a40-8995-96fbe94b99e3;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=5e177f8a-e0e8-4a01-b2a5-870d2b9f4c44"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# Ingress configuration
+ingress:
+  enabled: true
+  name: talking-points-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  tls:
+    enabled: true
+    secretName: talking-points-tls
+  service:
+    name: talking-points-service
+    port: 80
+
+# Network Policy configuration
+networkPolicy:
+  enabled: true
+  name: allow-egress-to-sql-redis
+  backend:
+    app: talking-points-backend
+  egress:
+    - {}
+    # Azure SQL CIDRs for West US 2
+    # sql:
+    #   enabled: true
+    #   port: 1433
+    #   cidrs:
+    #     - "13.66.136.0/26"
+    #     - "13.66.136.192/29"
+    #     - "13.66.137.0/26"
+    #     - "13.66.149.128/26"
+    #     - "13.66.226.202/32"
+    #     - "20.42.168.128/25"
+    #     - "20.42.174.128/25"
+    #     - "20.51.9.128/25"
+    #     - "20.83.193.0/26"
+    #     - "40.64.114.0/26"
+    #     - "40.78.240.0/26"
+    #     - "40.78.240.192/29"
+    #     - "40.78.241.0/26"
+    #     - "40.78.248.0/26"
+    #     - "40.78.248.192/29"
+    #     - "40.78.249.0/26"
+    #     - "52.191.144.64/26"
+    #     - "52.191.152.64/26"
+    #     - "52.246.251.248/32"
+
+    # # Azure Redis configuration
+    # redis:
+    #   enabled: true
+    #   port: 6380
+    #   cidr: "128.203.162.184/32"
+
+    # # DNS configuration
+    # dns:
+    #   enabled: true
+    #   cidr: "168.63.129.16/32"
+    #   ports:
+    #     udp: 53
+    #     tcp: 53
+
+# Azure Workload Identity Webhook
+azureWorkloadIdentity:
+  webhook:
+    enabled: true
+    image: mcr.microsoft.com/oss/azure/workload-identity/webhook:v1.1.0
+    replicas: 2
+    logLevel: "info"
+
+# Node selector for AKS
+nodeSelector:
+  kubernetes.io/arch: amd64
+  kubernetes.io/os: linux

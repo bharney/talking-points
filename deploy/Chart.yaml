@@ -1,0 +1,18 @@
+apiVersion: v2
+name: talking-points
+description: A Helm chart for Talking Points application with frontend, backend, and supporting services
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - talking-points
+  - frontend
+  - backend
+  - nextjs
+  - dotnet
+home: https://github.com/bharney/talking-points
+sources:
+  - https://github.com/bharney/talking-points
+maintainers:
+  - name: Brian Harney
+    email: brian.harney@example.com
