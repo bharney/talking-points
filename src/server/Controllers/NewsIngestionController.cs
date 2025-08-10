@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using talking_points.Models;
+using talking_points.Repository;
+using talking_points.server.Ingestion;
 
 namespace talking_points.server.Controllers
 {
@@ -17,9 +19,9 @@ namespace talking_points.server.Controllers
     private static readonly TimeSpan _minDelay = TimeSpan.FromMinutes(14.5); // ~14m30s for 100/day
     private static System.DateTime _lastReset = System.DateTime.UtcNow.Date;
 
-        public IngestionController(IConfiguration configuration, Repository.INewsArticleRepository newsArticleRepository)
+        public IngestionController(IConfiguration configuration, INewsArticleRepository newsArticleRepository, IHttpClientFactory httpClientFactory)
         {
-            _ingestionService = new Ingestion.NewsApiIngestionService(configuration);
+            _ingestionService = new NewsApiIngestionService(httpClientFactory.CreateClient(), configuration);
             _newsArticleRepository = newsArticleRepository;
         }
 

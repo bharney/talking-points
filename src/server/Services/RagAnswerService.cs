@@ -27,7 +27,7 @@ namespace talking_points.Services
         {
             var endpoint = config["AzureOpenAI:Endpoint"] ?? config["OpenAIEndpoint"];
             var key = config["AzureOpenAI:Key"] ?? config["OpenAIKey"];
-            _chatDeployment = config["AzureOpenAI:ChatDeployment"] ?? "gpt4";
+            _chatDeployment = config["AzureOpenAI:ChatDeployment"] ?? "gpt-4.1";
             if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(key))
             {
                 throw new ArgumentNullException("Azure OpenAI endpoint/key missing from configuration.");
