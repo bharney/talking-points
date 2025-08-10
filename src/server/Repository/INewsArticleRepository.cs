@@ -8,5 +8,7 @@ namespace talking_points.Repository
     {
         Task AddArticlesAsync(IEnumerable<NewsArticle> articles);
         Task<bool> ArticleExistsAsync(string url);
+    Task<System.DateTime?> GetLatestPublishedAtAsync();
+    Task<IReadOnlyList<NewsArticle>> FilterNewerUniqueAsync(IEnumerable<NewsArticle> candidates, System.DateTime? minPublishedExclusive);
     }
 }

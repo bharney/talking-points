@@ -34,5 +34,31 @@ namespace talking_points.Repository
         {
             return await _context.NewsArticles.AnyAsync(a => a.Url == url);
         }
+
+        public async Task<System.DateTime?> GetLatestPublishedAtAsync()
+        {
+            return await _context.NewsArticles
+                .Where(a => a.PublishedAt != null)
+                .OrderByDescending(a => a.PublishedAt)
+                .Select(a => a.PublishedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<IReadOnlyList<NewsArticle>> FilterNewerUniqueAsync(IEnumerable<NewsArticle> candidates, System.DateTime? minPublishedExclusive)
+        {
+            var list = candidates.ToList();
+            if (list.Count == 0) return Array.Empty<NewsArticle>();
+            var urls = list.Select(a => a.Url).Distinct().ToList();
+            var existing = await _context.NewsArticles
+                .Where(a => urls.Contains(a.Url))
+                .Select(a => new { a.Url, a.PublishedAt })
+                .ToListAsync();
+            var existingUrlSet = new HashSet<string>(existing.Select(e => e.Url));
+            var filtered = list.Where(a =>
+                !existingUrlSet.Contains(a.Url) &&
+                (!minPublishedExclusive.HasValue || (a.PublishedAt.HasValue && a.PublishedAt > minPublishedExclusive.Value))
+            ).ToList();
+            return filtered;
+        }
     }
 }

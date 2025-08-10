@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Text.Json;
+using talking_points.Models;
 
 namespace talking_points.server.Ingestion
 {
@@ -18,9 +19,9 @@ namespace talking_points.server.Ingestion
 			_config = config;
 		}
 
-		public async Task<IEnumerable<talking_points.Models.NewsArticle>> FetchTopHeadlinesAsync(string country = "us", int pageSize = 100)
+		public async Task<IEnumerable<NewsArticle>> FetchTopHeadlinesAsync(string country = "us", int pageSize = 100)
 		{
-			var articles = new List<talking_points.Models.NewsArticle>();
+			var articles = new List<NewsArticle>();
 			int page = 1;
 			int totalResults = 0;
 			var apiKey = _config["NewsAPIKey"]; // support either key name
@@ -50,7 +51,7 @@ namespace talking_points.server.Ingestion
 					{
 						var sourceId = article.GetProperty("source").TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
 						var sourceName = article.GetProperty("source").TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
-						articles.Add(new talking_points.Models.NewsArticle
+						articles.Add(new NewsArticle
 						{
 							SourceId = sourceId ?? string.Empty,
 							SourceName = sourceName ?? string.Empty,
