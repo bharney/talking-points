@@ -48,23 +48,78 @@ export function CirclePackingProvider({ children }: { children: ReactNode }) {
           throw new Error("Unexpected data shape (not array)");
         }
 
-        const treeViewModel = raw as Partial<TreeViewModel>[];
+        // Backend (ASP.NET) likely returns PascalCase (ArticleDetails, Keywords)
+        // while front-end interfaces expect camelCase. Normalize both forms.
+        interface RawKeyword {
+          id?: string;
+          Id?: string;
+          keyword?: string;
+          Keyword?: string;
+          articleId?: string;
+          ArticleId?: string;
+          count?: number;
+          Count?: number;
+        }
+        interface RawArticleDetails {
+          id?: string;
+          Id?: string;
+          title?: string;
+          Title?: string;
+          description?: string;
+          Description?: string;
+          source?: string;
+          Source?: string;
+          url?: string;
+          URL?: string;
+          abstract?: string | null;
+          Abstract?: string | null;
+        }
+        interface RawTreeItem {
+          articleDetails?: RawArticleDetails;
+          ArticleDetails?: RawArticleDetails;
+          keywords?: RawKeyword[];
+          Keywords?: RawKeyword[];
+        }
+        const treeViewModel = raw as RawTreeItem[];
 
-        const validItems = treeViewModel.filter((d, idx) => {
-          const ok = !!(
-            d &&
-            d.articleDetails &&
-            d.keywords &&
-            Array.isArray(d.keywords)
-          );
-          if (!ok) {
-            console.warn("circle-packing: dropping invalid item", {
-              index: idx,
-              item: d,
-            });
-          }
-          return ok;
-        }) as TreeViewModel[];
+        const normalizeItem = (d: RawTreeItem) => {
+          if (!d) return null;
+          // prefer camelCase if present, else map from PascalCase
+          const articleDetails = d.articleDetails || d.ArticleDetails;
+          const keywords = d.keywords || d.Keywords;
+          if (!articleDetails || !Array.isArray(keywords)) return null;
+          return {
+            articleDetails: {
+              id: articleDetails.id || articleDetails.Id,
+              title: articleDetails.title || articleDetails.Title,
+              description:
+                articleDetails.description || articleDetails.Description,
+              source: articleDetails.source || articleDetails.Source,
+              url: articleDetails.url || articleDetails.URL,
+              abstract:
+                articleDetails.abstract || articleDetails.Abstract || null,
+            },
+            keywords: keywords.map((k: RawKeyword) => ({
+              id: k.id || k.Id,
+              keyword: k.keyword || k.Keyword,
+              articleId: k.articleId || k.ArticleId,
+              count: k.count || k.Count || 0,
+            })),
+          } as TreeViewModel;
+        };
+
+        const validItems: TreeViewModel[] = treeViewModel
+          .map((d, idx) => {
+            const norm = normalizeItem(d);
+            if (!norm) {
+              console.warn(
+                "circle-packing: dropping invalid item (shape mismatch)",
+                { index: idx, d }
+              );
+            }
+            return norm;
+          })
+          .filter(Boolean) as TreeViewModel[];
 
         const transformData = (data: TreeViewModel[]) =>
           data.map((d) => ({
