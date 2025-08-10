@@ -13,16 +13,19 @@ namespace talking_points.server.Controllers
     {
     private readonly Ingestion.NewsApiIngestionService _ingestionService;
     private readonly Repository.INewsArticleRepository _newsArticleRepository;
+    private readonly ILogger<IngestionController> _logger;
     private static bool _isIngestionLoopRunning = false;
     private static int _requestsMadeToday = 0;
     private static readonly int _maxRequestsPerDay = 100; // NewsAPI Developer (free) plan
     private static readonly TimeSpan _minDelay = TimeSpan.FromMinutes(14.5); // ~14m30s for 100/day
     private static System.DateTime _lastReset = System.DateTime.UtcNow.Date;
 
-        public IngestionController(IConfiguration configuration, INewsArticleRepository newsArticleRepository, IHttpClientFactory httpClientFactory)
+        public IngestionController(IConfiguration configuration, INewsArticleRepository newsArticleRepository, IHttpClientFactory httpClientFactory, ILogger<IngestionController> logger)
         {
-            _ingestionService = new NewsApiIngestionService(httpClientFactory.CreateClient(), configuration);
+            // Use the named client so default headers (User-Agent, X-Api-Key) are applied.
+            _ingestionService = new NewsApiIngestionService(httpClientFactory.CreateClient("NewsApi"), configuration);
             _newsArticleRepository = newsArticleRepository;
+            _logger = logger;
         }
 
         [HttpPost("ingest")]
@@ -66,7 +69,7 @@ namespace talking_points.server.Controllers
                     }
                     catch (System.Exception ex)
                     {
-                        // TODO: Log exception
+                        _logger?.LogError(ex, "Error during NewsAPI ingestion loop iteration");
                     }
                     await Task.Delay(_minDelay);
                 }
