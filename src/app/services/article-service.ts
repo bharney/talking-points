@@ -5,7 +5,7 @@ export const searchArticles = async (
 ): Promise<Article[]> => {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/Search?searchPhrase=${searchPhrase}`
+      `${process.env.NEXT_PUBLIC_API_URL}/VectorSearch/hybrid?query=${searchPhrase}`
     );
     if (!res.ok) {
       throw new Error("Failed to fetch articles");
