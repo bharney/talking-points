@@ -15,8 +15,9 @@ namespace talking_points.Controllers
         private readonly ILogger<ArticleDetailsController> _logger;
         private readonly IConfiguration _config;
         private readonly IArticleRepository _articleRepository;
-        private readonly IKeywordRepository _keywordRepository;
+    private readonly IKeywordRepository _keywordRepository;
         private readonly IDatabase _cache;
+    private readonly IHostEnvironment _env;
         private const int DefaultPageSize = 20;
         private const string CacheKeyPrefix = "HomeController:TreeView";
 
@@ -25,23 +26,40 @@ namespace talking_points.Controllers
             IConfiguration config, 
             IArticleRepository articleRepository, 
             IKeywordRepository keywordRepository,
-            IRedisConnectionManager redisManager)
+            IRedisConnectionManager redisManager,
+            IHostEnvironment env)
         {
             _logger = logger;
             _config = config;
             _articleRepository = articleRepository;
             _keywordRepository = keywordRepository;
             _cache = redisManager.GetDatabase();
+            _env = env;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index([FromQuery] int page = 1, [FromQuery] int pageSize = DefaultPageSize)
+        public async Task<IActionResult> Index([FromQuery] int page = 1, [FromQuery] int pageSize = DefaultPageSize, [FromQuery] bool debug = false)
         {
+            var correlationId = Guid.NewGuid().ToString("n");
+            using var scope = _logger.BeginScope(new Dictionary<string, object>{{"CorrelationId", correlationId}});
+
             var cacheKey = $"{CacheKeyPrefix}:p{page}:s{pageSize}";
             var cachedResult = await _cache.StringGetAsync(cacheKey);
             if (!string.IsNullOrEmpty(cachedResult))
             {
-                return Ok(JsonSerializer.Deserialize<List<TreeViewModel>>(cachedResult));
+                _logger.LogInformation("{CorrelationId} cache hit for {CacheKey}", correlationId, cacheKey);
+                var cachedJson = cachedResult!; // non-null because !string.IsNullOrEmpty checked
+                List<TreeViewModel> cachedData = new();
+                if (!string.IsNullOrWhiteSpace(cachedJson))
+                {
+                    cachedData = JsonSerializer.Deserialize<List<TreeViewModel>>(cachedJson) ?? new List<TreeViewModel>();
+                }
+                return Ok(new {
+                    correlationId,
+                    source = "cache",
+                    count = cachedData.Count,
+                    data = cachedData
+                });
             }
 
             try
@@ -123,12 +141,25 @@ namespace talking_points.Controllers
                     processedKeywords.Count,
                     treeViewList.Count);
 
-                return Ok(treeViewList);
+                return Ok(new {
+                    correlationId,
+                    source = "fresh",
+                    count = treeViewList.Count,
+                    data = treeViewList
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing Index request");
-                return StatusCode(500, "An error occurred while processing your request");
+                _logger.LogError(ex, "{CorrelationId} Error processing Index request", correlationId);
+                var payload = new {
+                    error = "An error occurred while processing your request",
+                    correlationId,
+                    page,
+                    pageSize,
+                    debugDetails = (debug || _env.IsDevelopment()) ? ex.ToString() : null
+                };
+                // Return JSON for easier client diagnostics
+                return StatusCode(500, payload);
             }
         }
     }
