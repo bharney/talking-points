@@ -12,10 +12,9 @@ namespace talking_points.server.Ingestion
         private const string BaseUrl = "https://newsapi.org/v2/top-headlines";
 		private readonly IConfiguration _config;
 
-        public NewsApiIngestionService(IConfiguration config)
+        public NewsApiIngestionService(HttpClient httpClient, IConfiguration config)
         {
-            _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("talking-points-app/1.0");
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _config = config;
         }
 

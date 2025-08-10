@@ -8,6 +8,7 @@ using talking_points.Repository;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using talking_points.Services;
+using talking_points.Services.Caching;
 
 var allowLocalhost = "allowLocalhost";
 var allowServer = "allowServer";
@@ -22,7 +23,8 @@ var builtConfig = builder.Configuration;
 
 try
 {
-    var keyVaultEndpoint = new Uri(builtConfig["VaultEndpoint"]);
+    var vaultEndpointValue = builtConfig["VaultEndpoint"] ?? throw new InvalidOperationException("VaultEndpoint configuration missing");
+    var keyVaultEndpoint = new Uri(vaultEndpointValue);
     SecretClient secretClient;
 
     if (builder.Environment.IsDevelopment())
@@ -64,7 +66,7 @@ builder.Services.AddAuthentication()
         {
             ValidIssuer = builtConfig["Token:Issuer"],
             ValidAudience = builtConfig["Token:Issuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builtConfig["Token:Key256"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builtConfig["Token:Key256"] ?? throw new InvalidOperationException("Token:Key256 configuration missing")))
         };
     });
 
@@ -94,6 +96,15 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddTransient<DbSeeder>();
 builder.Services.AddSingleton<IRedisConnectionManager, RedisConnectionManager>();
+// Vector / RAG services
+builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
+builder.Services.AddSingleton<IVectorIndexService, VectorIndexService>();
+builder.Services.AddSingleton<IRagAnswerService, RagAnswerService>();
+builder.Services.AddSingleton<IChunkedVectorIndexService, ChunkedVectorIndexService>();
+builder.Services.AddHostedService<VectorIngestionHostedService>();
+// Caches
+builder.Services.AddSingleton<IEmbeddingCache, RedisEmbeddingCache>();
+builder.Services.AddSingleton<IAnswerCache, RedisAnswerCache>();
 builder.Services.AddRazorPages();
 
 builder.Services.AddCors(options =>
