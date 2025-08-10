@@ -16,15 +16,15 @@ namespace talking_points.Services
     {
         private readonly IServiceProvider _services;
         private readonly ILogger<VectorIngestionHostedService> _logger;
-    private readonly TimeSpan _interval;
-    private readonly bool _enabled;
-    private readonly bool _enableChunks;
-    private readonly int _batchSize;
-    private readonly int _embedRateLimitPerInterval;
-    private readonly TimeSpan _embedRateInterval;
-    private const string LastIndexedKey = "vector:lastIndexedId";
-    private DateTime _embedWindowStart = DateTime.UtcNow;
-    private int _embedWindowCount = 0;
+        private readonly TimeSpan _interval;
+        private readonly bool _enabled;
+        private readonly bool _enableChunks;
+        private readonly int _batchSize;
+        private readonly int _embedRateLimitPerInterval;
+        private readonly TimeSpan _embedRateInterval;
+        private const string LastIndexedKey = "vector:lastIndexedId";
+        private DateTime _embedWindowStart = DateTime.UtcNow;
+        private int _embedWindowCount = 0;
 
         public VectorIngestionHostedService(IServiceProvider services, IConfiguration config, ILogger<VectorIngestionHostedService> logger)
         {
@@ -59,13 +59,14 @@ namespace talking_points.Services
                 {
                     chunkSvc = scope.ServiceProvider.GetService<IChunkedVectorIndexService>();
                 }
-                await vectorIndex.EnsureIndexAsync();
-                if (_enableChunks && chunkSvc != null)
-                {
-                    await chunkSvc.EnsureChunkIndexAsync();
-                }
                 try
                 {
+                    // Ensure indexes inside try so 403 or other failures don't crash host
+                    await vectorIndex.EnsureIndexAsync();
+                    if (_enableChunks && chunkSvc != null)
+                    {
+                        await chunkSvc.EnsureChunkIndexAsync();
+                    }
                     var lastIdVal = await redis.StringGetAsync(LastIndexedKey);
                     var lastId = lastIdVal.HasValue && int.TryParse(lastIdVal, out var lid) ? lid : 0;
                     var sw = System.Diagnostics.Stopwatch.StartNew();

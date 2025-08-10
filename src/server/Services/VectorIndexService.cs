@@ -31,7 +31,7 @@ namespace talking_points.Services
                                    ILogger<VectorIndexService> logger,
                                    IAzureSearchClients clients)
         {
-            _indexName = config["AzureSearch:IndexName"] ?? config["Search:ArticlesIndexName"] ?? "articles-index";
+            _indexName = config["AzureSearchArticlesIndexName"] ??  "articles-index";
             _embeddingService = embeddingService;
             _logger = logger;
             _indexClient = clients.IndexClient;
@@ -55,6 +55,8 @@ namespace talking_points.Services
             }
             catch { /* continue to create */ }
 
+            const string vectorProfileName = "default-vector-profile";
+            const string vectorAlgoName = "vector-hnsw";
             var vectorDimensions = 1536; // embedding model dims
             var fields = new List<SearchField>
             {
@@ -63,14 +65,21 @@ namespace talking_points.Services
                 new SearchableField("description"),
                 new SearchableField("content"),
                 new SimpleField("publishedAt", SearchFieldDataType.DateTimeOffset) { IsFilterable = true, IsSortable = true },
-                // Keep vector field (some SDKs allow specifying dimensions even if vector config object not exposed)
                 new SearchField("embedding", SearchFieldDataType.Collection(SearchFieldDataType.Single))
                 {
                     IsSearchable = true,
-                    VectorSearchDimensions = vectorDimensions
+                    VectorSearchDimensions = vectorDimensions,
+                    VectorSearchProfileName = vectorProfileName
                 }
             };
-            var definition = new SearchIndex(_indexName, fields);
+            var definition = new SearchIndex(_indexName, fields)
+            {
+                VectorSearch = new VectorSearch
+                {
+                    Algorithms = { new HnswAlgorithmConfiguration(vectorAlgoName) },
+                    Profiles = { new VectorSearchProfile(vectorProfileName, vectorAlgoName) }
+                }
+            };
             await _indexClient.CreateOrUpdateIndexAsync(definition);
         }
 

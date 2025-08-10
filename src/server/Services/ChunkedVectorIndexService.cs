@@ -34,7 +34,7 @@ namespace talking_points.Services
                                         ILogger<ChunkedVectorIndexService> logger,
                                         IAzureSearchClients clients)
         {
-            _chunkIndexName = config["AzureSearch:ChunkIndexName"] ?? config["Search:ArticleChunksIndexName"] ?? "article-chunks-index";
+            _chunkIndexName = config["AzureSearchChunkIndexName"] ?? "article-chunks-index";
             _embeddingService = embeddingService;
             _logger = logger;
             _indexClient = clients.IndexClient;
@@ -53,6 +53,8 @@ namespace talking_points.Services
                 }
             }
             catch { }
+            const string vectorProfileName = "default-vector-profile";
+            const string vectorAlgoName = "vector-hnsw";
             var vectorDimensions = 1536;
             var fields = new List<SearchField>
             {
@@ -65,10 +67,18 @@ namespace talking_points.Services
                 new SearchField("embedding", SearchFieldDataType.Collection(SearchFieldDataType.Single))
                 {
                     IsSearchable = true,
-                    VectorSearchDimensions = vectorDimensions
+                    VectorSearchDimensions = vectorDimensions,
+                    VectorSearchProfileName = vectorProfileName
                 }
             };
-            var definition = new SearchIndex(_chunkIndexName, fields);
+            var definition = new SearchIndex(_chunkIndexName, fields)
+            {
+                VectorSearch = new VectorSearch
+                {
+                    Algorithms = { new HnswAlgorithmConfiguration(vectorAlgoName) },
+                    Profiles = { new VectorSearchProfile(vectorProfileName, vectorAlgoName) }
+                }
+            };
             await _indexClient.CreateOrUpdateIndexAsync(definition);
         }
 
