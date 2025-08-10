@@ -88,6 +88,7 @@ builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
 builder.Services.AddScoped<IKeywordRepository, KeywordRepository>();
 builder.Services.AddScoped<IArticleDetailsSearchClient, ArticleDetailsSearchClient>();
 builder.Services.AddScoped<IKeywordsSearchClient, KeywordsSearchClient>();
+builder.Services.AddScoped<INewsArticleRepository, NewsArticleRepository>();
 builder.Services.AddScoped<ICachedUserRepository<ApplicationUser>, CachedUserRepositoryDecorator>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
