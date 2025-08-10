@@ -24,5 +24,8 @@
   "javascript.preferences.quoteStyle": "single",
   "javascript.updateImportsOnFileMove.enabled": "prompt",
   "appService.defaultWebAppToDeploy": "undefined/subscriptions/1869078a-cd63-4fb4-b4a4-d7bac2228606/resourceGroups/bharney/providers/Microsoft.Web/sites/bharney",
-  "appService.deploySubpath": "."
+  "appService.deploySubpath": ".",
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp"
+  }
 }
