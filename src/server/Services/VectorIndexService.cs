@@ -96,13 +96,31 @@ namespace talking_points.Services
 						}
 						else
 						{
-							// Dimensions align; nothing to do.
+							// Dimensions align; ensure embedding field is retrievable (not hidden).
 							if (existingDims.HasValue)
 							{
 								_detectedDims ??= existingDims.Value;
-								_logger.LogDebug("Index '{index}' already exists with dims {dims}; EnsureIndexAsync noop", _indexName, existingDims.Value);
+								var existingEmbField = existing.Value.Fields.FirstOrDefault(f => f.Name == "embedding");
+								if (existingEmbField != null && existingEmbField.IsHidden == true)
+								{
+									_logger.LogWarning("Embedding field in index '{index}' is hidden; updating to make it retrievable.", _indexName);
+									existingEmbField.IsHidden = false;
+									try
+									{
+										await _indexClient.CreateOrUpdateIndexAsync(existing.Value);
+										_logger.LogInformation("Updated index '{index}' to make embedding field retrievable.", _indexName);
+									}
+									catch (Exception updEx)
+									{
+										_logger.LogError(updEx, "Failed to update index '{index}' to unhide embedding field.", _indexName);
+									}
+								}
+								else
+								{
+									_logger.LogDebug("Index '{index}' already exists with dims {dims}; EnsureIndexAsync noop", _indexName, existingDims.Value);
+								}
 							}
-							return;
+							return; // nothing else to do
 						}
 					}
 					catch (RequestFailedException rex) when (rex.Status == 404)
@@ -200,9 +218,27 @@ namespace talking_points.Services
 			options.Select.Add("content");
 			options.Select.Add("publishedAt");
 			options.Select.Add("embedding");
-			var results = await _searchClient.SearchAsync<SearchDocument>(query, options);
+			SearchResults<SearchDocument> results;
+			try
+			{
+				var resp = await _searchClient.SearchAsync<SearchDocument>(query, options);
+				results = resp.Value;
+			}
+			catch (RequestFailedException ex) when (ex.Message.Contains("not a retrievable field", StringComparison.OrdinalIgnoreCase))
+			{
+				_logger.LogWarning("Embedding field not retrievable in index '{index}'. Reissuing search without embeddings; skipping embedding rerank. Consider allowing retrieval or removing from select.", _indexName);
+				// Remove embedding from select and disable rerank by clearing queryEmbedding
+				for (int i = options.Select.Count - 1; i >= 0; i--)
+				{
+					if (string.Equals(options.Select[i], "embedding", StringComparison.OrdinalIgnoreCase))
+						options.Select.RemoveAt(i);
+				}
+				queryEmbedding = Array.Empty<float>();
+				var resp2 = await _searchClient.SearchAsync<SearchDocument>(query, options);
+				results = resp2.Value;
+			}
 			var provisional = new List<(NewsArticle Article, double Score, float[]? Embedding)>();
-			await foreach (var r in results.Value.GetResultsAsync())
+			await foreach (var r in results.GetResultsAsync())
 			{
 				var doc = r.Document;
 				float[]? emb = null;

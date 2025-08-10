@@ -100,7 +100,25 @@ namespace talking_points.Services
 							if (existingDims.HasValue)
 							{
 								_detectedDims ??= existingDims.Value;
-								_logger.LogDebug("Chunk index '{index}' already exists with dims {dims}; EnsureChunkIndexAsync noop", _chunkIndexName, existingDims.Value);
+								var existingEmbField = existing.Value.Fields.FirstOrDefault(f => f.Name == "embedding");
+								if (existingEmbField != null && existingEmbField.IsHidden == true)
+								{
+									_logger.LogWarning("Embedding field in chunk index '{index}' is hidden; updating to make it retrievable.", _chunkIndexName);
+									existingEmbField.IsHidden = false;
+									try
+									{
+										await _indexClient.CreateOrUpdateIndexAsync(existing.Value);
+										_logger.LogInformation("Updated chunk index '{index}' to make embedding field retrievable.", _chunkIndexName);
+									}
+									catch (Exception updEx)
+									{
+										_logger.LogError(updEx, "Failed to update chunk index '{index}' to unhide embedding field.", _chunkIndexName);
+									}
+								}
+								else
+								{
+									_logger.LogDebug("Chunk index '{index}' already exists with dims {dims}; EnsureChunkIndexAsync noop", _chunkIndexName, existingDims.Value);
+								}
 							}
 							return; // aligned, nothing to do
 						}
@@ -209,9 +227,26 @@ namespace talking_points.Services
 			options.Select.Add("chunkContent");
 			options.Select.Add("publishedAt");
 			options.Select.Add("embedding");
-			var results = await _chunkSearchClient.SearchAsync<SearchDocument>(query, options);
+			SearchResults<SearchDocument> searchResults;
+			try
+			{
+				var resp = await _chunkSearchClient.SearchAsync<SearchDocument>(query, options);
+				searchResults = resp.Value;
+			}
+			catch (RequestFailedException ex) when (ex.Message.Contains("not a retrievable field", StringComparison.OrdinalIgnoreCase))
+			{
+				_logger.LogWarning("Embedding field not retrievable for chunk index '{index}'. Reissuing search without embeddings; skipping rerank.", _chunkIndexName);
+				for (int i = options.Select.Count - 1; i >= 0; i--)
+				{
+					if (string.Equals(options.Select[i], "embedding", StringComparison.OrdinalIgnoreCase))
+						options.Select.RemoveAt(i);
+				}
+				queryEmbedding = Array.Empty<float>();
+				var resp2 = await _chunkSearchClient.SearchAsync<SearchDocument>(query, options);
+				searchResults = resp2.Value;
+			}
 			var chunkHits = new List<(int ArticleId, string Title, string Chunk, DateTime? PublishedAt, double LexScore, float[]? Emb)>();
-			await foreach (var r in results.Value.GetResultsAsync())
+			await foreach (var r in searchResults.GetResultsAsync())
 			{
 				var doc = r.Document;
 				float[]? emb = null;
