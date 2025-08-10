@@ -13,6 +13,7 @@ namespace talking_points.server.Controllers
 	{
 		private readonly Ingestion.NewsApiIngestionService _ingestionService;
 		private readonly Repository.INewsArticleRepository _newsArticleRepository;
+		private readonly IServiceScopeFactory _scopeFactory;
 		private readonly ILogger<IngestionController> _logger;
 		private static bool _isIngestionLoopRunning = false;
 		private static int _requestsMadeToday = 0;
@@ -20,12 +21,13 @@ namespace talking_points.server.Controllers
 		private static readonly TimeSpan _minDelay = TimeSpan.FromMinutes(14.5); // ~14m30s for 100/day
 		private static System.DateTime _lastReset = System.DateTime.UtcNow.Date;
 
-		public IngestionController(IConfiguration configuration, INewsArticleRepository newsArticleRepository, IHttpClientFactory httpClientFactory, ILogger<IngestionController> logger)
+		public IngestionController(IConfiguration configuration, INewsArticleRepository newsArticleRepository, IHttpClientFactory httpClientFactory, ILogger<IngestionController> logger, IServiceScopeFactory scopeFactory)
 		{
 			// Use the named client so default headers (User-Agent, X-Api-Key) are applied.
 			_ingestionService = new NewsApiIngestionService(httpClientFactory.CreateClient("NewsApi"), configuration);
 			_newsArticleRepository = newsArticleRepository;
 			_logger = logger;
+			_scopeFactory = scopeFactory;
 		}
 
 		[HttpPost("ingest")]
@@ -69,13 +71,22 @@ namespace talking_points.server.Controllers
 					}
 					try
 					{
-						var fetched = await _ingestionService.FetchTopHeadlinesAsync();
-						var latest = await _newsArticleRepository.GetLatestPublishedAtAsync();
-						var filtered = await _newsArticleRepository.FilterNewerUniqueAsync(fetched, latest);
-						if (filtered.Count > 0)
+						// Create a fresh scope each iteration so DbContext lifetime is valid
+						using (var scope = _scopeFactory.CreateScope())
 						{
-							await _newsArticleRepository.AddArticlesAsync(filtered);
-							_logger?.LogInformation("Inserted {count} new articles (loop)", filtered.Count);
+							var repo = scope.ServiceProvider.GetRequiredService<INewsArticleRepository>();
+							var fetched = await _ingestionService.FetchTopHeadlinesAsync();
+							var latest = await repo.GetLatestPublishedAtAsync();
+							var filtered = await repo.FilterNewerUniqueAsync(fetched, latest);
+							if (filtered.Count > 0)
+							{
+								await repo.AddArticlesAsync(filtered);
+								_logger?.LogInformation("Inserted {count} new articles (loop)", filtered.Count);
+							}
+							else
+							{
+								_logger?.LogInformation("No new articles found (loop)");
+							}
 						}
 						_requestsMadeToday++;
 					}
