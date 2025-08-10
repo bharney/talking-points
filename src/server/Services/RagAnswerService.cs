@@ -25,8 +25,8 @@ namespace talking_points.Services
         private readonly TimeSpan _ttl;
         public RagAnswerService(IConfiguration config, ILogger<RagAnswerService> logger, IAnswerCache? answerCache = null)
         {
-            var endpoint = config["AzureOpenAI:Endpoint"] ?? config["OpenAIEndpoint"];
-            var key = config["AzureOpenAI:Key"] ?? config["OpenAIKey"];
+            var endpoint = config["AzureOpenAIEndpoint"] ?? config["OpenAIEndpoint"];
+            var key = config["AzureOpenAIKey"] ?? config["OpenAIKey"];
             _chatDeployment = config["AzureOpenAI:ChatDeployment"] ?? "gpt-4.1";
             if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(key))
             {

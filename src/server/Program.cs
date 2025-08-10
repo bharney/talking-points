@@ -9,6 +9,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using talking_points.Services;
 using talking_points.Services.Caching;
+using Azure.Search.Documents.Indexes;
+using Azure.Search.Documents;
+using Azure;
 
 var allowLocalhost = "allowLocalhost";
 var allowServer = "allowServer";
@@ -106,7 +109,8 @@ builder.Services.AddHostedService<VectorIngestionHostedService>();
 builder.Services.AddSingleton<IEmbeddingCache, RedisEmbeddingCache>();
 builder.Services.AddSingleton<IAnswerCache, RedisAnswerCache>();
 builder.Services.AddRazorPages();
-
+// Azure AI Search abstraction
+builder.Services.AddSingleton<IAzureSearchClients, AzureSearchClients>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: allowLocalhost,

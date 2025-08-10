@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Indexes.Models;
@@ -20,22 +21,21 @@ namespace talking_points.Services
     public class VectorIndexService : IVectorIndexService
     {
         private readonly string _indexName;
-        private readonly SearchIndexClient _indexClient;
-        private readonly SearchClient _searchClient;
+    private readonly SearchIndexClient _indexClient;
+    private readonly SearchClient _searchClient;
         private readonly IEmbeddingService _embeddingService;
         private readonly ILogger<VectorIndexService> _logger;
 
         public VectorIndexService(IConfiguration config,
                                    IEmbeddingService embeddingService,
                                    ILogger<VectorIndexService> logger,
-                                   SearchIndexClient indexClient,
-                                   SearchClient searchClient)
+                                   IAzureSearchClients clients)
         {
-            _indexName = config["AzureSearch:IndexName"] ?? "news-articles";
+            _indexName = config["AzureSearch:IndexName"] ?? config["Search:ArticlesIndexName"] ?? "articles-index";
             _embeddingService = embeddingService;
             _logger = logger;
-            _indexClient = indexClient;
-            _searchClient = searchClient;
+            _indexClient = clients.IndexClient;
+            _searchClient = clients.ArticlesIndexClient;
         }
 
         public async Task EnsureIndexAsync()

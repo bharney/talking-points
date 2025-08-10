@@ -20,9 +20,9 @@ namespace talking_points.Services
         private readonly bool _enableCache;
         private readonly TimeSpan _ttl;
 
-        public EmbeddingService(OpenAIClient client, IConfiguration config, ILogger<EmbeddingService> logger, IEmbeddingCache? redisCache = null)
+        public EmbeddingService(IConfiguration config, ILogger<EmbeddingService> logger, IEmbeddingCache? redisCache = null)
         {
-            _client = client;
+            _client = new OpenAIClient(new Uri(config["AzureOpenAIEndpoint"]), new AzureKeyCredential(config["AzureOpenAIKey"]));
             _deployment = config["AzureOpenAI:EmbeddingDeployment"] ?? "embeddings";
             _logger = logger;
             _redisCache = redisCache;

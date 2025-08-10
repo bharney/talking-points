@@ -22,24 +22,23 @@ namespace talking_points.Services
     public class ChunkedVectorIndexService : IChunkedVectorIndexService
     {
         private readonly string _chunkIndexName;
-        private readonly SearchIndexClient _indexClient;
-        private readonly SearchClient _chunkSearchClient;
-        private readonly AzureKeyCredential _credential;
+    private readonly SearchIndexClient _indexClient;
+    private readonly SearchClient _chunkSearchClient;
         private readonly IEmbeddingService _embeddingService;
         private readonly ILogger<ChunkedVectorIndexService> _logger;
         private readonly int _chunkCharSize;
         private readonly int _chunkCharOverlap;
+
         public ChunkedVectorIndexService(IConfiguration config,
                                         IEmbeddingService embeddingService,
                                         ILogger<ChunkedVectorIndexService> logger,
-                                        SearchIndexClient indexClient)
+                                        IAzureSearchClients clients)
         {
-            _chunkIndexName = config["AzureSearch:ChunkIndexName"] ?? "news-article-chunks";
+            _chunkIndexName = config["AzureSearch:ChunkIndexName"] ?? config["Search:ArticleChunksIndexName"] ?? "article-chunks-index";
             _embeddingService = embeddingService;
             _logger = logger;
-            _indexClient = indexClient;
-            _credential = new AzureKeyCredential(config["AzureSearch:ApiKey"]);
-            _chunkSearchClient = new SearchClient(indexClient.Endpoint, _chunkIndexName, _credential);
+            _indexClient = clients.IndexClient;
+            _chunkSearchClient = clients.ChunksIndexClient;
             _chunkCharSize = int.TryParse(config["VectorIngestion:ChunkCharSize"], out var c) ? c : 4000; // ~1000 tokens
             _chunkCharOverlap = int.TryParse(config["VectorIngestion:ChunkCharOverlap"], out var o) ? o : 400;
         }
