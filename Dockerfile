@@ -9,7 +9,7 @@ RUN npm run build
 FROM node:lts-alpine
 WORKDIR /talking-points
 ENV NODE_ENV=production
-ENV HOSTNAME=0.0.0.0
+ENV NEXT_PUBLIC_API_URL=https://talkingpointsadmin-aae9dthfamaadwgj.centralus-01.azurewebsites.net
 COPY --from=builder /talking-points/next.config.ts ./
 COPY --from=builder /talking-points/public ./public
 COPY --from=builder /talking-points/.next/standalone ./
