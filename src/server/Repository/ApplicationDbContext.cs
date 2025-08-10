@@ -19,9 +19,11 @@ namespace talking_points.Repository
             // Add your customizations after calling base.OnModelCreating(builder);
             builder.Entity<ArticleDetails>();
             builder.Entity<Keywords>();
+            builder.Entity<NewsArticle>();
         }
 
-        public DbSet<ArticleDetails> ArticleDetails { get; set; }
-        public DbSet<Keywords> Keywords { get; set; }
+    public DbSet<ArticleDetails> ArticleDetails { get; set; }
+    public DbSet<Keywords> Keywords { get; set; }
+    public DbSet<NewsArticle> NewsArticles { get; set; }
     }
 }
