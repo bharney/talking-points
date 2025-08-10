@@ -47,8 +47,17 @@ export async function GET() {
       );
     }
 
-    const data = await res.json();
-    return NextResponse.json(data, {
+    const raw = await res.json();
+    // Backend now wraps array: { correlationId, source, count, data: [...] }
+    const arrayPayload = Array.isArray(raw) ? raw : raw?.data;
+    if (!Array.isArray(arrayPayload)) {
+      console.warn("circle-packing: upstream shape unexpected", raw);
+      return NextResponse.json(
+        { error: "Unexpected upstream shape", upstreamSample: raw?.data?.[0] ?? raw },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json(arrayPayload, {
       headers: { "x-circle-packing-upstream": target },
     });
   } catch (error) {
