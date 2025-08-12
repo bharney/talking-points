@@ -79,14 +79,17 @@ namespace talking_points.Services
 			var articlesJson = JsonSerializer.Serialize(inputs.Select(i => new { id = i.Id.ToString(), title = i.Title, body = i.Body }));
 			var prompt =
 				"You will be given an array of news articles in JSON with fields id (string GUID), title, and body. " +
-				"For each article, extract 1-5 concise, relevant keywords (NYT-style). " +
-				"Return ONLY a JSON array where each item is {\"articleId\": \"<guid>\", \"keywords\": [\"k1\", \"k2\", ...]}. " +
-				"Do not add explanations or extra text.\n\n" +
+				"For each article, extract 1-3 concise, relevant keywords (NYT-style). " +
+				"Output requirements: return ONLY a compact JSON array (no prose, no markdown) with exactly one item per input article, " +
+				"each item shaped as {\\\"articleId\\\": \\\"<guid>\\\", \\\"keywords\\\": [\\\"k1\\\", \\\"k2\\\", ...]}. " +
+				"Keywords must be lowercase, 1-3 words each, and deduplicated. " +
+				"If content is insufficient, return an empty keywords array for that article. " +
+				"Produce strictly valid JSON with no trailing commas and minimal whitespace.\n\n" +
 				$"articles: {articlesJson}";
 
 			var chatCompletionsOptions = new ChatCompletionsOptions
 			{
-				MaxTokens = 128,
+				MaxTokens = 512,
 				Temperature = 0.3f,
 				DeploymentName = _chatDeployment
 			};
