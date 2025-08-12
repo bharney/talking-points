@@ -26,7 +26,7 @@ export const vectorSearchArticles = async (
     const payload = await res.json();
     const results = Array.isArray(payload?.results) ? payload.results : [];
     // Map results to Article shape expected by UI
-  return (results as VectorResultItem[]).map((r) => ({
+    return (results as VectorResultItem[]).map((r) => ({
       id: r.Id?.toString?.() ?? r.id ?? "",
       title: r.Title ?? r.title ?? "Untitled",
       description: r.Description ?? r.description ?? null,

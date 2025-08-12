@@ -18,7 +18,8 @@ export default function SearchForm() {
     setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await router.push(`/search/${encodeURIComponent(query)}`);
+      // Navigate to vector search results
+      await router.push(`/vector-search/${encodeURIComponent(query)}`);
     } catch (error) {
       console.error("Navigation failed:", error);
       setIsLoading(false);
