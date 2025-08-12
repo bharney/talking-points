@@ -5,9 +5,9 @@ import SearchResults from "../../components/search-results";
 export default async function Page({
   params,
 }: {
-  params: Promise<{ search: string }>;
+  params: { search: string };
 }) {
-  const { search } = await params;
+  const { search } = params;
   const articles = await searchArticles(search);
 
   return (
