@@ -1,19 +1,24 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using talking_points.Models;
 using talking_points.Repository;
 using talking_points.server.Ingestion;
+using talking_points.Services;
 
-namespace talking_points.server.Controllers
+namespace talking_points.Controllers
 {
 	[ApiController]
 	[Route("api/[controller]")]
 	public class IngestionController : ControllerBase
 	{
-		private readonly Ingestion.NewsApiIngestionService _ingestionService;
-		private readonly Repository.INewsArticleRepository _newsArticleRepository;
+		private readonly NewsApiIngestionService _ingestionService;
+		private readonly INewsArticleRepository _newsArticleRepository;
+		private readonly IKeywordService _keywordService;
 		private readonly IServiceScopeFactory _scopeFactory;
 		private readonly ILogger<IngestionController> _logger;
 		private static bool _isIngestionLoopRunning = false;
@@ -25,7 +30,13 @@ namespace talking_points.server.Controllers
 		private static CancellationTokenSource? _cts;
 		private readonly IConfiguration _configuration;
 
-		public IngestionController(IConfiguration configuration, INewsArticleRepository newsArticleRepository, IHttpClientFactory httpClientFactory, ILogger<IngestionController> logger, IServiceScopeFactory scopeFactory)
+		public IngestionController(
+			IConfiguration configuration,
+			INewsArticleRepository newsArticleRepository,
+			IHttpClientFactory httpClientFactory,
+			ILogger<IngestionController> logger,
+			IServiceScopeFactory scopeFactory,
+			IKeywordService keywordService)
 		{
 			// Use the named client so default headers (User-Agent, X-Api-Key) are applied.
 			_ingestionService = new NewsApiIngestionService(httpClientFactory.CreateClient("NewsApi"), configuration);
@@ -33,6 +44,7 @@ namespace talking_points.server.Controllers
 			_logger = logger;
 			_scopeFactory = scopeFactory;
 			_configuration = configuration;
+			_keywordService = keywordService;
 
 			// Allow configuring loop behavior via configuration
 			if (int.TryParse(_configuration["NewsApi:MaxRequestsPerDay"], out var maxReq) && maxReq > 0)
@@ -61,7 +73,8 @@ namespace talking_points.server.Controllers
 				return Ok(new { Message = "No new articles", LatestKnown = latest });
 			}
 			await _newsArticleRepository.AddArticlesAsync(filtered);
-			return Ok(new { Inserted = filtered.Count, LatestKnown = latest, MaxFetched = filtered.Max(a => a.PublishedAt) });
+			await _keywordService.GenerateKeywordsAsync(filtered);
+			return Ok();
 		}
 
 		[HttpPost("start-loop")]
@@ -112,6 +125,7 @@ namespace talking_points.server.Controllers
 							var filtered = await repo.FilterNewerUniqueAsync(fetched, latest);
 							if (filtered.Count > 0)
 							{
+								await _keywordService.GenerateKeywordsAsync(filtered);
 								await repo.AddArticlesAsync(filtered);
 								_logger?.LogInformation("Inserted {count} new articles (loop)", filtered.Count);
 							}

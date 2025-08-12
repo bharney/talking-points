@@ -34,7 +34,7 @@ namespace talking_points.Controllers
 			return Ok(new
 			{
 				query,
-				results = results.Select(r => new { r.Article.Id, r.Article.Title, r.Article.Description, r.Article.Url, r.Article.SourceName, r.Article.PublishedAt, score = r.Score }),
+				results = results.Select(r => new { r.Article.Id, r.Article.Title, r.Article.Description, r.Article.URL, r.Article.SourceName, r.Article.PublishedAt, score = r.Score }),
 				answer
 			});
 		}
@@ -53,7 +53,7 @@ namespace talking_points.Controllers
 			return Ok(new
 			{
 				query,
-				results = results.Select(r => new { r.Article.Id, r.Article.Title, r.Article.Description, r.Article.Url, r.Article.SourceName, r.Snippet, r.Article.PublishedAt, score = r.Score }),
+				results = results.Select(r => new { r.Article.Id, r.Article.Title, r.Article.Description, r.Article.URL, r.Article.SourceName, r.Snippet, r.Article.PublishedAt, score = r.Score }),
 				answer
 			});
 		}

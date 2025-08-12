@@ -19,9 +19,9 @@ namespace talking_points.server.Ingestion
 			_config = config;
 		}
 
-		public async Task<IEnumerable<NewsArticle>> FetchTopHeadlinesAsync(string country = "us", int pageSize = 100)
+		public async Task<IEnumerable<ArticleDetails>> FetchTopHeadlinesAsync(string country = "us", int pageSize = 100)
 		{
-			var articles = new List<NewsArticle>();
+			var articles = new List<ArticleDetails>();
 			int page = 1;
 			int totalResults = 0;
 			var apiKey = _config["NewsAPIKey"]; // support either key name
@@ -51,14 +51,15 @@ namespace talking_points.server.Ingestion
 					{
 						var sourceId = article.GetProperty("source").TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
 						var sourceName = article.GetProperty("source").TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
-						articles.Add(new NewsArticle
+						articles.Add(new ArticleDetails
 						{
-							SourceId = sourceId ?? string.Empty,
+							Id = Guid.NewGuid(), // Generate a new GUID for each article
+							Source = sourceId ?? string.Empty,
 							SourceName = sourceName ?? string.Empty,
 							Author = article.TryGetProperty("author", out var authorProp) ? (authorProp.GetString() ?? string.Empty) : string.Empty,
 							Title = article.TryGetProperty("title", out var titleProp) ? (titleProp.GetString() ?? string.Empty) : string.Empty,
 							Description = article.TryGetProperty("description", out var descProp) ? (descProp.GetString() ?? string.Empty) : string.Empty,
-							Url = article.TryGetProperty("url", out var urlProp) ? (urlProp.GetString() ?? string.Empty) : string.Empty,
+							URL = article.TryGetProperty("url", out var urlProp) ? (urlProp.GetString() ?? string.Empty) : string.Empty,
 							UrlToImage = article.TryGetProperty("urlToImage", out var imgProp) ? (imgProp.GetString() ?? string.Empty) : string.Empty,
 							PublishedAt = article.TryGetProperty("publishedAt", out var pubProp) && DateTime.TryParse(pubProp.GetString(), out var dt) ? dt : (DateTime?)null,
 							Content = article.TryGetProperty("content", out var contentProp) ? (contentProp.GetString() ?? string.Empty) : string.Empty

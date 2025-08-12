@@ -14,9 +14,9 @@ namespace talking_points.Services
 	public interface IChunkedVectorIndexService
 	{
 		Task EnsureChunkIndexAsync();
-		Task UpsertArticleChunksAsync(NewsArticle article);
-		Task UpsertArticleChunksAsync(IEnumerable<NewsArticle> articles);
-		Task<IReadOnlyList<(NewsArticle Article, double Score, string Snippet)>> ChunkHybridSearchAsync(string query, int topChunks = 15, int topArticles = 10);
+		Task UpsertArticleChunksAsync(ArticleDetails article);
+		Task UpsertArticleChunksAsync(IEnumerable<ArticleDetails> articles);
+		Task<IReadOnlyList<(ArticleDetails Article, double Score, string Snippet)>> ChunkHybridSearchAsync(string query, int topChunks = 15, int topArticles = 10);
 	}
 
 	public class ChunkedVectorIndexService : IChunkedVectorIndexService
@@ -61,15 +61,19 @@ namespace talking_points.Services
 				}
 				if (exists)
 				{
-						try
+					try
 					{
 						var existing = await _indexClient.GetIndexAsync(_chunkIndexName);
 						var embField = existing.Value.Fields.FirstOrDefault(f => f.Name == "embedding");
 						var existingDims = embField?.VectorSearchDimensions;
-							var hasVectorConfig = existing.Value.VectorSearch != null
-								&& existing.Value.VectorSearch.Profiles?.Count > 0
-								&& embField is not null
-								&& !string.IsNullOrWhiteSpace(embField.VectorSearchProfileName);
+						var hasVectorConfig = existing.Value.VectorSearch != null
+							&& existing.Value.VectorSearch.Profiles?.Count > 0
+							&& embField is not null
+							&& !string.IsNullOrWhiteSpace(embField.VectorSearchProfileName);
+
+						// If articleId field exists with wrong type (Int32), recreate index to switch to String (GUID)
+						var articleIdField = existing.Value.Fields.FirstOrDefault(f => f.Name == "articleId");
+						var needsArticleIdFix = articleIdField != null && articleIdField.Type == SearchFieldDataType.Int32;
 						if (!_detectedDims.HasValue)
 						{
 							try
@@ -84,7 +88,7 @@ namespace talking_points.Services
 								_detectedDims = existingDims ?? 1536;
 							}
 						}
-							if (existingDims.HasValue && _detectedDims.HasValue && existingDims.Value != _detectedDims.Value)
+						if (existingDims.HasValue && _detectedDims.HasValue && existingDims.Value != _detectedDims.Value)
 						{
 							var msg = $"Chunk index '{_chunkIndexName}' has embedding dims {existingDims.Value} but model returns {_detectedDims.Value}";
 							if (_recreateOnMismatch)
@@ -99,21 +103,23 @@ namespace talking_points.Services
 								return;
 							}
 						}
-							else if (!hasVectorConfig)
+						else if (!hasVectorConfig || needsArticleIdFix)
+						{
+							var msg = needsArticleIdFix
+								? $"Chunk index '{_chunkIndexName}' has articleId as Int32; recreating to change it to String (GUID)."
+								: $"Chunk index '{_chunkIndexName}' missing vector search configuration or field profile; recreating to enable vector queries.";
+							if (_recreateOnMismatch)
 							{
-								var msg = $"Chunk index '{_chunkIndexName}' missing vector search configuration or field profile; recreating to enable vector queries.";
-								if (_recreateOnMismatch)
-								{
-									_logger.LogWarning(msg);
-									await _indexClient.DeleteIndexAsync(_chunkIndexName);
-									// proceed to recreate
-								}
-								else
-								{
-									_logger.LogError(msg + " Set AzureSearch:RecreateOnDimensionMismatch=true to auto-fix.");
-									return;
-								}
+								_logger.LogWarning(msg);
+								await _indexClient.DeleteIndexAsync(_chunkIndexName);
+								// proceed to recreate
 							}
+							else
+							{
+								_logger.LogError(msg + " Set AzureSearch:RecreateOnDimensionMismatch=true to auto-fix.");
+								return;
+							}
+						}
 						else
 						{
 							if (existingDims.HasValue)
@@ -175,7 +181,7 @@ namespace talking_points.Services
 			var fields = new List<SearchField>
 			{
 				new SimpleField("id", SearchFieldDataType.String){ IsKey = true, IsFilterable = true },
-				new SimpleField("articleId", SearchFieldDataType.Int32){ IsFilterable = true },
+				new SimpleField("articleId", SearchFieldDataType.String){ IsFilterable = true },
 				new SearchableField("title") { IsFilterable = true },
 				new SearchableField("chunkContent"),
 				new SimpleField("chunkOrder", SearchFieldDataType.Int32){ IsFilterable = true, IsSortable = true },
@@ -198,13 +204,13 @@ namespace talking_points.Services
 			await _indexClient.CreateOrUpdateIndexAsync(definition);
 		}
 
-		public async Task UpsertArticleChunksAsync(IEnumerable<NewsArticle> articles)
+		public async Task UpsertArticleChunksAsync(IEnumerable<ArticleDetails> articles)
 		{
 			foreach (var a in articles)
 				await UpsertArticleChunksAsync(a);
 		}
 
-		public async Task UpsertArticleChunksAsync(NewsArticle article)
+		public async Task UpsertArticleChunksAsync(ArticleDetails article)
 		{
 			if (article == null || string.IsNullOrWhiteSpace(article.Content)) return;
 			var chunks = Chunk(article.Content, _chunkCharSize, _chunkCharOverlap).ToList();
@@ -217,7 +223,7 @@ namespace talking_points.Services
 				var doc = new SearchDocument
 				{
 					["id"] = $"{article.Id}-{i}",
-					["articleId"] = article.Id,
+					["articleId"] = article.Id.ToString(),
 					["title"] = article.Title,
 					["chunkContent"] = chunkText,
 					["chunkOrder"] = i,
@@ -236,7 +242,7 @@ namespace talking_points.Services
 			}
 		}
 
-		public async Task<IReadOnlyList<(NewsArticle Article, double Score, string Snippet)>> ChunkHybridSearchAsync(string query, int topChunks = 15, int topArticles = 10)
+		public async Task<IReadOnlyList<(ArticleDetails Article, double Score, string Snippet)>> ChunkHybridSearchAsync(string query, int topChunks = 15, int topArticles = 10)
 		{
 			var queryEmbedding = await _embeddingService.EmbedAsync(query);
 			var options = new SearchOptions { Size = topChunks };
@@ -259,12 +265,12 @@ namespace talking_points.Services
 			}
 			var resp = await _chunkSearchClient.SearchAsync<SearchDocument>(query, options);
 			var searchResults = resp.Value;
-			var chunkHits = new List<(int ArticleId, string Title, string Chunk, DateTime? PublishedAt, double LexScore, float[]? Emb)>();
+			var chunkHits = new List<(string ArticleId, string Title, string Chunk, DateTime? PublishedAt, double LexScore, float[]? Emb)>();
 			await foreach (var r in searchResults.GetResultsAsync())
 			{
 				var doc = r.Document;
 				float[]? emb = null; // we no longer require retrieving embeddings; service score is sufficient
-				int articleId = doc.ContainsKey("articleId") && int.TryParse(doc["articleId"].ToString(), out var aid) ? aid : 0;
+				string articleId = doc.ContainsKey("articleId") ? doc["articleId"]?.ToString() ?? string.Empty : string.Empty;
 				DateTime? published = doc.ContainsKey("publishedAt") && doc["publishedAt"] is DateTimeOffset dto ? dto.DateTime : (DateTime?)null;
 				chunkHits.Add((articleId,
 								doc.ContainsKey("title") ? doc["title"]?.ToString() ?? string.Empty : string.Empty,
@@ -277,7 +283,7 @@ namespace talking_points.Services
 			var grouped = chunkHits
 				.GroupBy(x => x.ArticleId)
 				.Select(g => (
-					Article: new NewsArticle { Id = g.Key, Title = g.First().Title, Content = g.First().Chunk, PublishedAt = g.First().PublishedAt },
+					Article: new ArticleDetails { Id = Guid.TryParse(g.Key, out var guid) ? guid : Guid.Empty, Title = g.First().Title, Content = g.First().Chunk, PublishedAt = g.First().PublishedAt },
 					Score: g.Max(x => x.LexScore),
 					Snippet: g.First().Chunk.Length > 400 ? g.First().Chunk.Substring(0, 400) + "..." : g.First().Chunk))
 				.OrderByDescending(t => t.Score)

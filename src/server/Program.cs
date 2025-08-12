@@ -104,6 +104,7 @@ builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 builder.Services.AddSingleton<IVectorIndexService, VectorIndexService>();
 builder.Services.AddSingleton<IRagAnswerService, RagAnswerService>();
 builder.Services.AddSingleton<IChunkedVectorIndexService, ChunkedVectorIndexService>();
+builder.Services.AddScoped<IKeywordService, KeywordService>();
 builder.Services.AddHostedService<VectorIngestionHostedService>();
 // Caches
 builder.Services.AddSingleton<IEmbeddingCache, RedisEmbeddingCache>();

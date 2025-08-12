@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Globalization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,7 @@ namespace talking_points.Services
 		private readonly int _batchSize;
 		private readonly int _embedRateLimitPerInterval;
 		private readonly TimeSpan _embedRateInterval;
-		private const string LastIndexedKey = "vector:lastIndexedId";
+		private const string LastIndexedKey = "vector:lastIndexedPublishedAt";
 		private DateTime _embedWindowStart = DateTime.UtcNow;
 		private int _embedWindowCount = 0;
 
@@ -67,12 +68,21 @@ namespace talking_points.Services
 					{
 						await chunkSvc.EnsureChunkIndexAsync();
 					}
-					var lastIdVal = await redis.StringGetAsync(LastIndexedKey);
-					var lastId = lastIdVal.HasValue && int.TryParse(lastIdVal, out var lid) ? lid : 0;
+					var lastPubVal = await redis.StringGetAsync(LastIndexedKey);
+					DateTime lastPublished = DateTime.MinValue;
+					if (lastPubVal.HasValue)
+					{
+						// Expect round-trip ISO 8601 format
+						if (!DateTime.TryParse(lastPubVal.ToString(), null, DateTimeStyles.RoundtripKind, out lastPublished))
+						{
+							// Fallback: try invariant parse
+							DateTime.TryParse(lastPubVal.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out lastPublished);
+						}
+					}
 					var sw = System.Diagnostics.Stopwatch.StartNew();
-					var newArticles = await db.NewsArticles
-						.Where(a => a.Id > lastId)
-						.OrderBy(a => a.Id)
+					var newArticles = await db.ArticleDetails
+						.Where(a => a.PublishedAt != null && a.PublishedAt > lastPublished)
+						.OrderBy(a => a.PublishedAt)
 						.Take(_batchSize)
 						.ToListAsync(stoppingToken);
 					if (newArticles.Count == 0)
@@ -91,9 +101,9 @@ namespace talking_points.Services
 								await chunkSvc.UpsertArticleChunksAsync(art);
 							}
 						}
-						var maxId = newArticles.Max(a => a.Id);
-						await redis.StringSetAsync(LastIndexedKey, maxId);
-						_logger.LogInformation("Indexed {count} articles (lastId -> {id}) chunks:{chunks}", newArticles.Count, maxId, _enableChunks);
+						var maxPublished = newArticles.Max(a => a.PublishedAt ?? DateTime.MinValue);
+						await redis.StringSetAsync(LastIndexedKey, maxPublished.ToString("o"));
+						_logger.LogInformation("Indexed {count} articles (lastPublished -> {ts}) chunks:{chunks}", newArticles.Count, maxPublished, _enableChunks);
 						telemetry?.TrackMetric("VectorIngestionDocuments", newArticles.Count);
 						if (_enableChunks)
 							telemetry?.TrackMetric("VectorIngestionChunkedArticles", newArticles.Count);
