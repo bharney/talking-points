@@ -53,7 +53,10 @@ export async function GET() {
     if (!Array.isArray(arrayPayload)) {
       console.warn("circle-packing: upstream shape unexpected", raw);
       return NextResponse.json(
-        { error: "Unexpected upstream shape", upstreamSample: raw?.data?.[0] ?? raw },
+        {
+          error: "Unexpected upstream shape",
+          upstreamSample: raw?.data?.[0] ?? raw,
+        },
         { status: 500 }
       );
     }
