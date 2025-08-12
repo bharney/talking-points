@@ -4,9 +4,9 @@ import VectorSearchResults from "../../components/vector-search-results";
 export default async function VectorSearchPage({
   params,
 }: {
-  params: { search: string };
+  params: Promise<{ search: string }>;
 }) {
-  const { search } = params;
+  const { search } = await params;
   const articles = await vectorSearchArticles(search);
 
   return (
