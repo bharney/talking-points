@@ -66,15 +66,15 @@ namespace talking_points.Controllers
 		public async Task<IActionResult> IngestTopHeadlines()
 		{
 			var fetched = await _ingestionService.FetchTopHeadlinesAsync();
-			var latest = await _newsArticleRepository.GetLatestPublishedAtAsync();
-			var filtered = await _newsArticleRepository.FilterNewerUniqueAsync(fetched, latest);
-			if (filtered.Count == 0)
-			{
-				return Ok(new { Message = "No new articles", LatestKnown = latest });
-			}
-			await _keywordService.GenerateKeywordsAsync(filtered);
-			await _newsArticleRepository.AddArticlesAsync(filtered);
-			return Ok(new { Inserted = filtered.Count, LatestKnown = latest, MaxFetched = filtered.Max(a => a.PublishedAt) });
+			// var latest = await _newsArticleRepository.GetLatestPublishedAtAsync();
+			// var filtered = await _newsArticleRepository.FilterNewerUniqueAsync(fetched, latest);
+			// if (filtered.Count == 0)
+			// {
+			// 	return Ok(new { Message = "No new articles", LatestKnown = latest });
+			// }
+			await _keywordService.GenerateKeywordsAsync(fetched);
+			// await _newsArticleRepository.AddArticlesAsync(filtered);
+			return Ok();
 		}
 
 		[HttpPost("start-loop")]

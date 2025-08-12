@@ -12,7 +12,7 @@ namespace talking_points.Services
 {
 	public interface IRagAnswerService
 	{
-		Task<string> CreateAnswerAsync(string query, IReadOnlyList<NewsArticle> contextArticles);
+		Task<string> CreateAnswerAsync(string query, IReadOnlyList<ArticleDetails> contextArticles);
 	}
 
 	public class RagAnswerService : IRagAnswerService
@@ -39,7 +39,7 @@ namespace talking_points.Services
 			_ttl = TimeSpan.FromMinutes(int.TryParse(config["Cache:AnswerTtlMinutes"], out var m) ? m : 30);
 		}
 
-		public async Task<string> CreateAnswerAsync(string query, IReadOnlyList<NewsArticle> contextArticles)
+		public async Task<string> CreateAnswerAsync(string query, IReadOnlyList<ArticleDetails> contextArticles)
 		{
 			if (_enableCache && _answerCache != null)
 			{

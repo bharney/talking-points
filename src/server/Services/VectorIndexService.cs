@@ -14,8 +14,8 @@ namespace talking_points.Services
 	public interface IVectorIndexService
 	{
 		Task EnsureIndexAsync();
-		Task UpsertArticlesAsync(IEnumerable<NewsArticle> articles);
-		Task<IReadOnlyList<(NewsArticle Article, double Score)>> HybridSearchAsync(string query, int top = 10);
+		Task UpsertArticlesAsync(IEnumerable<ArticleDetails> articles);
+		Task<IReadOnlyList<(ArticleDetails Article, double Score)>> HybridSearchAsync(string query, int top = 10);
 	}
 
 	public class VectorIndexService : IVectorIndexService
@@ -57,15 +57,15 @@ namespace talking_points.Services
 				if (exists)
 				{
 					// Index exists; verify dimension alignment instead of returning immediately.
-						try
+					try
 					{
 						var existing = await _indexClient.GetIndexAsync(_indexName);
 						var embField = existing.Value.Fields.FirstOrDefault(f => f.Name == "embedding");
 						var existingDims = embField?.VectorSearchDimensions;
-							var hasVectorConfig = existing.Value.VectorSearch != null
-								&& existing.Value.VectorSearch.Profiles?.Count > 0
-								&& embField is not null
-								&& !string.IsNullOrWhiteSpace(embField.VectorSearchProfileName);
+						var hasVectorConfig = existing.Value.VectorSearch != null
+							&& existing.Value.VectorSearch.Profiles?.Count > 0
+							&& embField is not null
+							&& !string.IsNullOrWhiteSpace(embField.VectorSearchProfileName);
 
 						// If we haven't detected current embedding dims yet, probe now (only if mismatch or unknown)
 						if (!_detectedDims.HasValue)
@@ -83,7 +83,7 @@ namespace talking_points.Services
 							}
 						}
 
-							if (existingDims.HasValue && _detectedDims.HasValue && existingDims.Value != _detectedDims.Value)
+						if (existingDims.HasValue && _detectedDims.HasValue && existingDims.Value != _detectedDims.Value)
 						{
 							var msg = $"Index '{_indexName}' has embedding dims {existingDims.Value} but model returns {_detectedDims.Value}";
 							if (_recreateOnMismatch)
@@ -98,21 +98,21 @@ namespace talking_points.Services
 								return;
 							}
 						}
-							else if (!hasVectorConfig)
+						else if (!hasVectorConfig)
+						{
+							var msg = $"Index '{_indexName}' missing vector search configuration or field profile; recreating to enable vector queries.";
+							if (_recreateOnMismatch)
 							{
-								var msg = $"Index '{_indexName}' missing vector search configuration or field profile; recreating to enable vector queries.";
-								if (_recreateOnMismatch)
-								{
-									_logger.LogWarning(msg);
-									await _indexClient.DeleteIndexAsync(_indexName);
-									// Continue to recreate below
-								}
-								else
-								{
-									_logger.LogError(msg + " Set AzureSearch:RecreateOnDimensionMismatch=true to auto-fix.");
-									return;
-								}
+								_logger.LogWarning(msg);
+								await _indexClient.DeleteIndexAsync(_indexName);
+								// Continue to recreate below
 							}
+							else
+							{
+								_logger.LogError(msg + " Set AzureSearch:RecreateOnDimensionMismatch=true to auto-fix.");
+								return;
+							}
+						}
 						else
 						{
 							// Dimensions align; ensure embedding field is retrievable (not hidden).
@@ -198,7 +198,7 @@ namespace talking_points.Services
 			await _indexClient.CreateOrUpdateIndexAsync(definition);
 		}
 
-		public async Task UpsertArticlesAsync(IEnumerable<NewsArticle> articles)
+		public async Task UpsertArticlesAsync(IEnumerable<ArticleDetails> articles)
 		{
 			var batch = new List<IndexDocumentsAction<SearchDocument>>();
 			foreach (var a in articles)
@@ -226,7 +226,7 @@ namespace talking_points.Services
 			}
 		}
 
-		public async Task<IReadOnlyList<(NewsArticle Article, double Score)>> HybridSearchAsync(string query, int top = 10)
+		public async Task<IReadOnlyList<(ArticleDetails Article, double Score)>> HybridSearchAsync(string query, int top = 10)
 		{
 			// True hybrid: run lexical search with a vector kNN query so we don't depend solely on keyword matches.
 			// If the SDK/Index doesn't allow retrieving embeddings, we won't fetch them; we'll trust the service's score.
@@ -240,7 +240,8 @@ namespace talking_points.Services
 			// Add the vector query (kNN) against the embedding field.
 			try
 			{
-				options.VectorSearch = new() {
+				options.VectorSearch = new()
+				{
 					Queries = { new VectorizedQuery(queryEmbedding) { KNearestNeighborsCount = Math.Max(top, 50), Fields = { "embedding" } } }
 				};
 			}
@@ -251,13 +252,13 @@ namespace talking_points.Services
 
 			var resp = await _searchClient.SearchAsync<SearchDocument>(query, options);
 			var results = resp.Value;
-			var list = new List<(NewsArticle Article, double Score)>();
+			var list = new List<(ArticleDetails Article, double Score)>();
 			await foreach (var r in results.GetResultsAsync())
 			{
 				var doc = r.Document;
-				list.Add((new NewsArticle
+				list.Add((new ArticleDetails
 				{
-					Id = int.TryParse(doc["id"].ToString(), out var idVal) ? idVal : 0,
+					Id = Guid.TryParse(doc.ContainsKey("id") ? doc["id"]?.ToString() : string.Empty, out var guid) ? guid : Guid.Empty,
 					Title = doc.ContainsKey("title") ? doc["title"]?.ToString() ?? string.Empty : string.Empty,
 					Description = doc.ContainsKey("description") ? doc["description"]?.ToString() : null,
 					Content = doc.ContainsKey("content") ? doc["content"]?.ToString() ?? string.Empty : string.Empty,

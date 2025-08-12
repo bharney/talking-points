@@ -11,8 +11,8 @@ namespace talking_points.Services.Caching
 {
 	public interface IAnswerCache
 	{
-		Task<string?> GetAsync(string query, IEnumerable<NewsArticle> articles);
-		Task SetAsync(string query, IEnumerable<NewsArticle> articles, string answer, TimeSpan ttl);
+		Task<string?> GetAsync(string query, IEnumerable<ArticleDetails> articles);
+		Task SetAsync(string query, IEnumerable<ArticleDetails> articles, string answer, TimeSpan ttl);
 	}
 
 	public class RedisAnswerCache : IAnswerCache
@@ -26,7 +26,7 @@ namespace talking_points.Services.Caching
 			_defaultTtl = TimeSpan.FromMinutes(minutes);
 		}
 
-		private static string Key(string query, IEnumerable<NewsArticle> articles)
+		private static string Key(string query, IEnumerable<ArticleDetails> articles)
 		{
 			using var sha = SHA256.Create();
 			var normQ = query.Trim().ToLowerInvariant();
@@ -36,14 +36,14 @@ namespace talking_points.Services.Caching
 			return $"ans:{hash}";
 		}
 
-		public async Task<string?> GetAsync(string query, IEnumerable<NewsArticle> articles)
+		public async Task<string?> GetAsync(string query, IEnumerable<ArticleDetails> articles)
 		{
 			var key = Key(query, articles);
 			var v = await _db.StringGetAsync(key);
 			return v.HasValue ? v.ToString() : null;
 		}
 
-		public async Task SetAsync(string query, IEnumerable<NewsArticle> articles, string answer, TimeSpan ttl)
+		public async Task SetAsync(string query, IEnumerable<ArticleDetails> articles, string answer, TimeSpan ttl)
 		{
 			if (string.IsNullOrWhiteSpace(answer)) return;
 			var key = Key(query, articles);

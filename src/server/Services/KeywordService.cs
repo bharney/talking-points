@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using Azure.AI.OpenAI;
 using Azure;
+using talking_points;
 using talking_points.Models;
 using talking_points.Repository;
 
@@ -13,7 +14,7 @@ namespace talking_points.Services
 
 	public interface IKeywordService
 	{
-		Task<IEnumerable<Keywords>> GenerateKeywordsAsync(IEnumerable<NewsArticle> articles);
+		Task<IEnumerable<Keywords>> GenerateKeywordsAsync(IEnumerable<ArticleDetails> articles);
 	}
 
 	public class KeywordService : IKeywordService
@@ -40,9 +41,9 @@ namespace talking_points.Services
 			_articleRepository = articleRepository;
 		}
 
-		// Generate keywords for NewsArticles. We key the model output by articleId and persist only when we can map
-		// back to an ArticleDetails row (via URL). If mapping/parsing fails for an item, skip it and continue.
-		public async Task<IEnumerable<Keywords>> GenerateKeywordsAsync(IEnumerable<NewsArticle> articles)
+		// Generate keywords for ArticleDetails. We key the model output by articleId (GUID string) and persist
+		// directly against the provided ArticleDetails. If mapping/parsing fails for an item, skip it and continue.
+		public async Task<IEnumerable<Keywords>> GenerateKeywordsAsync(IEnumerable<ArticleDetails> articles)
 		{
 			var allKeywords = new List<Keywords>();
 			// Build a single, batched prompt from all articles while keeping within a safe size
@@ -56,15 +57,15 @@ namespace talking_points.Services
 			}
 
 			const int perArticleWordLimit = 300;
-			const int maxArticlesInBatch = 10; // avoid overly large prompts
-			var inputs = new List<(int Id, string Url, string Title, string Body)>();
-			foreach (var article in articles.Where(a => a != null))
+			const int maxArticlesInBatch = 5; // avoid overly large prompts
+			var inputs = new List<(Guid Id, string Title, string Body)>();
+			foreach (var article in articles)
 			{
-				if (article.Id <= 0 || string.IsNullOrWhiteSpace(article.Url)) continue;
+				if (article.Id == Guid.Empty || string.IsNullOrWhiteSpace(article.URL)) continue;
 				var title = article.Title ?? string.Empty;
 				var body = TruncateWords(article.Content ?? article.Description ?? string.Empty, perArticleWordLimit);
 				if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(body)) continue;
-				inputs.Add((article.Id, article.Url, title, body));
+				inputs.Add((article.Id, title, body));
 				if (inputs.Count >= maxArticlesInBatch) break;
 			}
 
@@ -74,12 +75,12 @@ namespace talking_points.Services
 				return allKeywords;
 			}
 
-			// Build a JSON-in/JSON-out instruction so we can map keywords back to article IDs.
-			var articlesJson = JsonSerializer.Serialize(inputs.Select(i => new { id = i.Id, title = i.Title, body = i.Body }));
+			// Build a JSON-in/JSON-out instruction so we can map keywords back to article IDs (GUID as string).
+			var articlesJson = JsonSerializer.Serialize(inputs.Select(i => new { id = i.Id.ToString(), title = i.Title, body = i.Body }));
 			var prompt =
-				"You will be given an array of news articles in JSON with fields id (number), title, and body. " +
+				"You will be given an array of news articles in JSON with fields id (string GUID), title, and body. " +
 				"For each article, extract 1-5 concise, relevant keywords (NYT-style). " +
-				"Return ONLY a JSON array where each item is {\"articleId\": <id>, \"keywords\": [\"k1\", \"k2\", ...]}. " +
+				"Return ONLY a JSON array where each item is {\"articleId\": \"<guid>\", \"keywords\": [\"k1\", \"k2\", ...]}. " +
 				"Do not add explanations or extra text.\n\n" +
 				$"articles: {articlesJson}";
 
@@ -109,17 +110,15 @@ namespace talking_points.Services
 				return allKeywords; // terminate early for this batch
 			}
 
-			// Build a lookup of articleId -> (id, url) for persistence
-			var byId = inputs.ToDictionary(i => i.Id, i => i.Url);
+			// Build a lookup of articleId (string GUID) -> ArticleDetails for persistence
+			var byId = articles.Where(a => a != null)
+				.ToDictionary(a => a.Id.ToString(), a => a);
 			foreach (var item in parsed)
 			{
 				if (item == null || item.Keywords == null || item.Keywords.Count == 0) continue;
 				var idValue = item.ArticleId ?? item.Id;
-				if (idValue == null) continue;
-				if (!byId.TryGetValue(idValue.Value, out var url)) continue; // can't map; skip
-																			 // Find matching ArticleDetails by URL (required for ArticleId FK)
-				var details = await _articleRepository.GetByURL(url);
-				if (details == null) continue; // cannot satisfy FK; skip this item
+				if (string.IsNullOrWhiteSpace(idValue)) continue;
+				if (!byId.TryGetValue(idValue, out var details)) continue; // can't map; skip
 				var unique = item.Keywords
 					.Where(s => !string.IsNullOrWhiteSpace(s))
 					.Select(s => s.Trim())
@@ -133,8 +132,7 @@ namespace talking_points.Services
 					{
 						Id = Guid.NewGuid(),
 						Keyword = kw,
-						ArticleId = details.Id,
-						NewsArticleId = idValue.Value
+						ArticleId = details.Id
 					};
 					await _keywordRepository.Insert(entity);
 					allKeywords.Add(entity);
@@ -146,8 +144,9 @@ namespace talking_points.Services
 
 		private sealed class ParsedItem
 		{
-			public int? ArticleId { get; set; }
-			public int? Id { get; set; } // tolerate either name
+			// For ArticleDetails flow (GUID as string)
+			public string? ArticleId { get; set; }
+			public string? Id { get; set; } // tolerate either name
 			public List<string>? Keywords { get; set; }
 		}
 
