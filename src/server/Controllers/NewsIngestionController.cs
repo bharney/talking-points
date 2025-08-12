@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using talking_points.Models;
@@ -17,9 +18,12 @@ namespace talking_points.server.Controllers
 		private readonly ILogger<IngestionController> _logger;
 		private static bool _isIngestionLoopRunning = false;
 		private static int _requestsMadeToday = 0;
-		private static readonly int _maxRequestsPerDay = 100; // NewsAPI Developer (free) plan
-		private static readonly TimeSpan _minDelay = TimeSpan.FromMinutes(14.5); // ~14m30s for 100/day
+		private static int _maxRequestsPerDay = 100; // default for NewsAPI Developer (free) plan
+		private static TimeSpan _minDelay = TimeSpan.FromMinutes(14.5); // default ~14m30s for 100/day
 		private static System.DateTime _lastReset = System.DateTime.UtcNow.Date;
+		private static System.DateTime? _nextRunUtc = null;
+		private static CancellationTokenSource? _cts;
+		private readonly IConfiguration _configuration;
 
 		public IngestionController(IConfiguration configuration, INewsArticleRepository newsArticleRepository, IHttpClientFactory httpClientFactory, ILogger<IngestionController> logger, IServiceScopeFactory scopeFactory)
 		{
@@ -28,6 +32,22 @@ namespace talking_points.server.Controllers
 			_newsArticleRepository = newsArticleRepository;
 			_logger = logger;
 			_scopeFactory = scopeFactory;
+			_configuration = configuration;
+
+			// Allow configuring loop behavior via configuration
+			if (int.TryParse(_configuration["NewsApi:MaxRequestsPerDay"], out var maxReq) && maxReq > 0)
+			{
+				_maxRequestsPerDay = maxReq;
+			}
+			// Prefer seconds for more granular control, fallback to minutes if provided
+			if (int.TryParse(_configuration["NewsApi:LoopDelaySeconds"], out var delaySeconds) && delaySeconds > 0)
+			{
+				_minDelay = TimeSpan.FromSeconds(delaySeconds);
+			}
+			else if (double.TryParse(_configuration["NewsApi:LoopDelayMinutes"], out var delayMinutes) && delayMinutes > 0)
+			{
+				_minDelay = TimeSpan.FromMinutes(delayMinutes);
+			}
 		}
 
 		[HttpPost("ingest")]
@@ -52,9 +72,12 @@ namespace talking_points.server.Controllers
 				return BadRequest(new { Message = "Ingestion loop is already running." });
 			}
 			_isIngestionLoopRunning = true;
+			_cts = new CancellationTokenSource();
+			var token = _cts.Token;
+			_logger?.LogInformation("Starting ingestion loop. Delay between runs: {delay}, MaxRequestsPerDay: {max}", _minDelay, _maxRequestsPerDay);
 			Task.Run(async () =>
 			{
-				while (_isIngestionLoopRunning)
+				while (_isIngestionLoopRunning && !token.IsCancellationRequested)
 				{
 					// Reset daily counter at midnight UTC
 					if (System.DateTime.UtcNow.Date > _lastReset)
@@ -66,7 +89,16 @@ namespace talking_points.server.Controllers
 					{
 						// Wait until next UTC midnight
 						var untilMidnight = _lastReset.AddDays(1) - System.DateTime.UtcNow;
-						await Task.Delay(untilMidnight);
+						_nextRunUtc = System.DateTime.UtcNow.Add(untilMidnight);
+						_logger?.LogInformation("Max requests reached ({count}/{max}). Sleeping until UTC midnight at {nextRunUtc}", _requestsMadeToday, _maxRequestsPerDay, _nextRunUtc);
+						try
+						{
+							await Task.Delay(untilMidnight, token);
+						}
+						catch (TaskCanceledException)
+						{
+							break;
+						}
 						continue;
 					}
 					try
@@ -94,7 +126,17 @@ namespace talking_points.server.Controllers
 					{
 						_logger?.LogError(ex, "Error during NewsAPI ingestion loop iteration");
 					}
-					await Task.Delay(_minDelay);
+					// Schedule next run and delay
+					_nextRunUtc = System.DateTime.UtcNow.Add(_minDelay);
+					_logger?.LogInformation("Next ingestion run scheduled at {nextRunUtc} (UTC)", _nextRunUtc);
+					try
+					{
+						await Task.Delay(_minDelay, token);
+					}
+					catch (TaskCanceledException)
+					{
+						break;
+					}
 				}
 			});
 			return Ok(new { Message = "Ingestion loop started." });
@@ -108,7 +150,23 @@ namespace talking_points.server.Controllers
 				return BadRequest(new { Message = "Ingestion loop is not running." });
 			}
 			_isIngestionLoopRunning = false;
+			_cts?.Cancel();
+			_logger?.LogInformation("Ingestion loop stop requested.");
 			return Ok(new { Message = "Ingestion loop stopped." });
+		}
+
+		[HttpGet("status")]
+		public IActionResult GetStatus()
+		{
+			return Ok(new
+			{
+				Running = _isIngestionLoopRunning,
+				RequestsMadeToday = _requestsMadeToday,
+				MaxRequestsPerDay = _maxRequestsPerDay,
+				LoopDelaySeconds = (int)_minDelay.TotalSeconds,
+				LastResetUtc = _lastReset,
+				NextRunUtc = _nextRunUtc
+			});
 		}
 	}
 }
