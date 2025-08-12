@@ -72,9 +72,9 @@ namespace talking_points.Controllers
 			{
 				return Ok(new { Message = "No new articles", LatestKnown = latest });
 			}
-			await _keywordService.GenerateKeywordsAsync(filtered);
 			await _newsArticleRepository.AddArticlesAsync(filtered);
-			return Ok(new { Inserted = filtered.Count, LatestKnown = latest, MaxFetched = filtered.Max(a => a.PublishedAt) });
+			await _keywordService.GenerateKeywordsAsync(filtered);
+			return Ok();
 		}
 
 		[HttpPost("start-loop")]

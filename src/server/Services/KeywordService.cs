@@ -76,12 +76,13 @@ namespace talking_points.Services
 			}
 
 			// Build a JSON-in/JSON-out instruction so we can map keywords back to article IDs (GUID as string).
-			var articlesJson = JsonSerializer.Serialize(inputs.Select(i => new { id = i.Id.ToString(), title = i.Title, body = i.Body }));
+			var articlesJson = JsonSerializer.Serialize(inputs.Select(i => new { articleId = i.Id.ToString(), title = i.Title, body = i.Body }));
 			var prompt =
-				"You will be given an array of news articles in JSON with fields id (string GUID), title, and body. " +
+				"You will be given an array of news articles in JSON with fields articleId (string GUID), title, and body. " +
 				"For each article, extract 1-3 concise, relevant keywords (NYT-style). " +
 				"Output requirements: return ONLY a compact JSON array (no prose, no markdown) with exactly one item per input article, " +
 				"each item shaped as {\\\"articleId\\\": \\\"<guid>\\\", \\\"keywords\\\": [\\\"k1\\\", \\\"k2\\\", ...]}. " +
+				"articleId should correspond to the article your given, that your creating relevant keywords for" +
 				"Keywords must be lowercase, 1-3 words each, and deduplicated. " +
 				"If content is insufficient, return an empty keywords array for that article. " +
 				"Produce strictly valid JSON with no trailing commas and minimal whitespace.\n\n" +
@@ -101,11 +102,18 @@ namespace talking_points.Services
 			);
 
 			var content = completionResponse.Value.Choices.FirstOrDefault()?.Message.Content ?? string.Empty;
-			// Try parse JSON output
+			// Try to parse the response as a strict JSON array; if not valid, terminate early
 			List<ParsedItem> parsed = new();
 			try
 			{
-				parsed = JsonSerializer.Deserialize<List<ParsedItem>>(ExtractJson(content)) ?? new();
+				var trimmed = content?.Trim() ?? string.Empty;
+				if (string.IsNullOrWhiteSpace(trimmed) || !trimmed.StartsWith("["))
+				{
+					_logger.LogWarning("Keywords response is not a JSON array; content: {content}", content);
+					return allKeywords;
+				}
+				var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+				parsed = JsonSerializer.Deserialize<List<ParsedItem>>(trimmed, jsonOptions) ?? new();
 			}
 			catch (Exception ex)
 			{
@@ -119,7 +127,7 @@ namespace talking_points.Services
 			foreach (var item in parsed)
 			{
 				if (item == null || item.Keywords == null || item.Keywords.Count == 0) continue;
-				var idValue = item.ArticleId ?? item.Id;
+				var idValue = item.ArticleId;
 				if (string.IsNullOrWhiteSpace(idValue)) continue;
 				if (!byId.TryGetValue(idValue, out var details)) continue; // can't map; skip
 				var unique = item.Keywords
@@ -129,6 +137,11 @@ namespace talking_points.Services
 					.Distinct(StringComparer.OrdinalIgnoreCase)
 					.ToList();
 				if (unique.Count == 0) continue;
+				// try parse guid
+				if (!Guid.TryParse(idValue, out var articleId)) continue;
+				// get the articleId from the repo
+				var existing = await _articleRepository.Get(articleId);
+				if (existing == null) continue;
 				foreach (var kw in unique)
 				{
 					var entity = new Keywords
@@ -149,7 +162,6 @@ namespace talking_points.Services
 		{
 			// For ArticleDetails flow (GUID as string)
 			public string? ArticleId { get; set; }
-			public string? Id { get; set; } // tolerate either name
 			public List<string>? Keywords { get; set; }
 		}
 
