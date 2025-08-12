@@ -77,84 +77,84 @@ namespace talking_points.Controllers
 			return Ok();
 		}
 
-		// [HttpPost("start-loop")]
-		// public IActionResult StartIngestionLoop()
-		// {
-		// 	if (_isIngestionLoopRunning)
-		// 	{
-		// 		return BadRequest(new { Message = "Ingestion loop is already running." });
-		// 	}
-		// 	_isIngestionLoopRunning = true;
-		// 	_cts = new CancellationTokenSource();
-		// 	var token = _cts.Token;
-		// 	_logger?.LogInformation("Starting ingestion loop. Delay between runs: {delay}, MaxRequestsPerDay: {max}", _minDelay, _maxRequestsPerDay);
-		// 	Task.Run(async () =>
-		// 	{
-		// 		while (_isIngestionLoopRunning && !token.IsCancellationRequested)
-		// 		{
-		// 			// Reset daily counter at midnight UTC
-		// 			if (System.DateTime.UtcNow.Date > _lastReset)
-		// 			{
-		// 				_requestsMadeToday = 0;
-		// 				_lastReset = System.DateTime.UtcNow.Date;
-		// 			}
-		// 			if (_requestsMadeToday >= _maxRequestsPerDay)
-		// 			{
-		// 				// Wait until next UTC midnight
-		// 				var untilMidnight = _lastReset.AddDays(1) - System.DateTime.UtcNow;
-		// 				_nextRunUtc = System.DateTime.UtcNow.Add(untilMidnight);
-		// 				_logger?.LogInformation("Max requests reached ({count}/{max}). Sleeping until UTC midnight at {nextRunUtc}", _requestsMadeToday, _maxRequestsPerDay, _nextRunUtc);
-		// 				try
-		// 				{
-		// 					await Task.Delay(untilMidnight, token);
-		// 				}
-		// 				catch (TaskCanceledException)
-		// 				{
-		// 					break;
-		// 				}
-		// 				continue;
-		// 			}
-		// 			try
-		// 			{
-		// 				// Create a fresh scope each iteration so DbContext lifetime is valid
-		// 				using (var scope = _scopeFactory.CreateScope())
-		// 				{
-		// 					var repo = scope.ServiceProvider.GetRequiredService<INewsArticleRepository>();
-		// 					var fetched = await _ingestionService.FetchTopHeadlinesAsync();
-		// 					var latest = await repo.GetLatestPublishedAtAsync();
-		// 					var filtered = await repo.FilterNewerUniqueAsync(fetched, latest);
-		// 					if (filtered.Count > 0)
-		// 					{
-		// 						await _keywordService.GenerateKeywordsAsync(filtered);
-		// 						await repo.AddArticlesAsync(filtered);
-		// 						_logger?.LogInformation("Inserted {count} new articles (loop)", filtered.Count);
-		// 					}
-		// 					else
-		// 					{
-		// 						_logger?.LogInformation("No new articles found (loop)");
-		// 					}
-		// 				}
-		// 				_requestsMadeToday++;
-		// 			}
-		// 			catch (System.Exception ex)
-		// 			{
-		// 				_logger?.LogError(ex, "Error during NewsAPI ingestion loop iteration");
-		// 			}
-		// 			// Schedule next run and delay
-		// 			_nextRunUtc = System.DateTime.UtcNow.Add(_minDelay);
-		// 			_logger?.LogInformation("Next ingestion run scheduled at {nextRunUtc} (UTC)", _nextRunUtc);
-		// 			try
-		// 			{
-		// 				await Task.Delay(_minDelay, token);
-		// 			}
-		// 			catch (TaskCanceledException)
-		// 			{
-		// 				break;
-		// 			}
-		// 		}
-		// 	});
-		// 	return Ok(new { Message = "Ingestion loop started." });
-		// }
+		[HttpPost("start-loop")]
+		public IActionResult StartIngestionLoop()
+		{
+			if (_isIngestionLoopRunning)
+			{
+				return BadRequest(new { Message = "Ingestion loop is already running." });
+			}
+			_isIngestionLoopRunning = true;
+			_cts = new CancellationTokenSource();
+			var token = _cts.Token;
+			_logger?.LogInformation("Starting ingestion loop. Delay between runs: {delay}, MaxRequestsPerDay: {max}", _minDelay, _maxRequestsPerDay);
+			Task.Run(async () =>
+			{
+				while (_isIngestionLoopRunning && !token.IsCancellationRequested)
+				{
+					// Reset daily counter at midnight UTC
+					if (System.DateTime.UtcNow.Date > _lastReset)
+					{
+						_requestsMadeToday = 0;
+						_lastReset = System.DateTime.UtcNow.Date;
+					}
+					if (_requestsMadeToday >= _maxRequestsPerDay)
+					{
+						// Wait until next UTC midnight
+						var untilMidnight = _lastReset.AddDays(1) - System.DateTime.UtcNow;
+						_nextRunUtc = System.DateTime.UtcNow.Add(untilMidnight);
+						_logger?.LogInformation("Max requests reached ({count}/{max}). Sleeping until UTC midnight at {nextRunUtc}", _requestsMadeToday, _maxRequestsPerDay, _nextRunUtc);
+						try
+						{
+							await Task.Delay(untilMidnight, token);
+						}
+						catch (TaskCanceledException)
+						{
+							break;
+						}
+						continue;
+					}
+					try
+					{
+						// Create a fresh scope each iteration so DbContext lifetime is valid
+						using (var scope = _scopeFactory.CreateScope())
+						{
+							var repo = scope.ServiceProvider.GetRequiredService<INewsArticleRepository>();
+							var fetched = await _ingestionService.FetchTopHeadlinesAsync();
+							var latest = await repo.GetLatestPublishedAtAsync();
+							var filtered = await repo.FilterNewerUniqueAsync(fetched, latest);
+							if (filtered.Count > 0)
+							{
+								await _keywordService.GenerateKeywordsAsync(filtered);
+								await repo.AddArticlesAsync(filtered);
+								_logger?.LogInformation("Inserted {count} new articles (loop)", filtered.Count);
+							}
+							else
+							{
+								_logger?.LogInformation("No new articles found (loop)");
+							}
+						}
+						_requestsMadeToday++;
+					}
+					catch (System.Exception ex)
+					{
+						_logger?.LogError(ex, "Error during NewsAPI ingestion loop iteration");
+					}
+					// Schedule next run and delay
+					_nextRunUtc = System.DateTime.UtcNow.Add(_minDelay);
+					_logger?.LogInformation("Next ingestion run scheduled at {nextRunUtc} (UTC)", _nextRunUtc);
+					try
+					{
+						await Task.Delay(_minDelay, token);
+					}
+					catch (TaskCanceledException)
+					{
+						break;
+					}
+				}
+			});
+			return Ok(new { Message = "Ingestion loop started." });
+		}
 
 		[HttpPost("stop-loop")]
 		public IActionResult StopIngestionLoop()
