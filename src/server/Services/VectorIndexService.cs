@@ -57,11 +57,15 @@ namespace talking_points.Services
 				if (exists)
 				{
 					// Index exists; verify dimension alignment instead of returning immediately.
-					try
+						try
 					{
 						var existing = await _indexClient.GetIndexAsync(_indexName);
 						var embField = existing.Value.Fields.FirstOrDefault(f => f.Name == "embedding");
 						var existingDims = embField?.VectorSearchDimensions;
+							var hasVectorConfig = existing.Value.VectorSearch != null
+								&& existing.Value.VectorSearch.Profiles?.Count > 0
+								&& embField is not null
+								&& !string.IsNullOrWhiteSpace(embField.VectorSearchProfileName);
 
 						// If we haven't detected current embedding dims yet, probe now (only if mismatch or unknown)
 						if (!_detectedDims.HasValue)
@@ -79,7 +83,7 @@ namespace talking_points.Services
 							}
 						}
 
-						if (existingDims.HasValue && _detectedDims.HasValue && existingDims.Value != _detectedDims.Value)
+							if (existingDims.HasValue && _detectedDims.HasValue && existingDims.Value != _detectedDims.Value)
 						{
 							var msg = $"Index '{_indexName}' has embedding dims {existingDims.Value} but model returns {_detectedDims.Value}";
 							if (_recreateOnMismatch)
@@ -94,6 +98,21 @@ namespace talking_points.Services
 								return;
 							}
 						}
+							else if (!hasVectorConfig)
+							{
+								var msg = $"Index '{_indexName}' missing vector search configuration or field profile; recreating to enable vector queries.";
+								if (_recreateOnMismatch)
+								{
+									_logger.LogWarning(msg);
+									await _indexClient.DeleteIndexAsync(_indexName);
+									// Continue to recreate below
+								}
+								else
+								{
+									_logger.LogError(msg + " Set AzureSearch:RecreateOnDimensionMismatch=true to auto-fix.");
+									return;
+								}
+							}
 						else
 						{
 							// Dimensions align; ensure embedding field is retrievable (not hidden).
@@ -209,7 +228,8 @@ namespace talking_points.Services
 
 		public async Task<IReadOnlyList<(NewsArticle Article, double Score)>> HybridSearchAsync(string query, int top = 10)
 		{
-			// Embed query and perform lexical search, then cosine re-rank if embeddings present.
+			// True hybrid: run lexical search with a vector kNN query so we don't depend solely on keyword matches.
+			// If the SDK/Index doesn't allow retrieving embeddings, we won't fetch them; we'll trust the service's score.
 			var queryEmbedding = await _embeddingService.EmbedAsync(query);
 			var options = new SearchOptions { Size = top, IncludeTotalCount = true };
 			options.Select.Add("id");
@@ -217,56 +237,35 @@ namespace talking_points.Services
 			options.Select.Add("description");
 			options.Select.Add("content");
 			options.Select.Add("publishedAt");
-			options.Select.Add("embedding");
-			SearchResults<SearchDocument> results;
+			// Add the vector query (kNN) against the embedding field.
 			try
 			{
-				var resp = await _searchClient.SearchAsync<SearchDocument>(query, options);
-				results = resp.Value;
+				options.VectorSearch = new() {
+					Queries = { new VectorizedQuery(queryEmbedding) { KNearestNeighborsCount = Math.Max(top, 50), Fields = { "embedding" } } }
+				};
 			}
-			catch (RequestFailedException ex) when (ex.Message.Contains("not a retrievable field", StringComparison.OrdinalIgnoreCase))
+			catch (Exception ex)
 			{
-				_logger.LogWarning("Embedding field not retrievable in index '{index}'. Reissuing search without embeddings; skipping embedding rerank. Consider allowing retrieval or removing from select.", _indexName);
-				// Remove embedding from select and disable rerank by clearing queryEmbedding
-				for (int i = options.Select.Count - 1; i >= 0; i--)
-				{
-					if (string.Equals(options.Select[i], "embedding", StringComparison.OrdinalIgnoreCase))
-						options.Select.RemoveAt(i);
-				}
-				queryEmbedding = Array.Empty<float>();
-				var resp2 = await _searchClient.SearchAsync<SearchDocument>(query, options);
-				results = resp2.Value;
+				_logger.LogWarning(ex, "Failed to attach vector query; proceeding with lexical only for this request.");
 			}
-			var provisional = new List<(NewsArticle Article, double Score, float[]? Embedding)>();
+
+			var resp = await _searchClient.SearchAsync<SearchDocument>(query, options);
+			var results = resp.Value;
+			var list = new List<(NewsArticle Article, double Score)>();
 			await foreach (var r in results.GetResultsAsync())
 			{
 				var doc = r.Document;
-				float[]? emb = null;
-				if (doc.TryGetValue("embedding", out var embObj) && embObj is IEnumerable<float> floats)
-				{
-					emb = floats.ToArray();
-				}
-				provisional.Add((new NewsArticle
+				list.Add((new NewsArticle
 				{
 					Id = int.TryParse(doc["id"].ToString(), out var idVal) ? idVal : 0,
 					Title = doc.ContainsKey("title") ? doc["title"]?.ToString() ?? string.Empty : string.Empty,
 					Description = doc.ContainsKey("description") ? doc["description"]?.ToString() : null,
 					Content = doc.ContainsKey("content") ? doc["content"]?.ToString() ?? string.Empty : string.Empty,
 					PublishedAt = doc.ContainsKey("publishedAt") && doc["publishedAt"] is DateTimeOffset dto ? dto.DateTime : (DateTime?)null
-				}, r.Score ?? 0, emb));
+				}, r.Score ?? 0));
 			}
-			static double CosSim(float[] a, float[] b)
-			{
-				double dot = 0, na = 0, nb = 0; int len = Math.Min(a.Length, b.Length);
-				for (int i = 0; i < len; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
-				return (na > 0 && nb > 0) ? dot / (Math.Sqrt(na) * Math.Sqrt(nb)) : 0;
-			}
-			var reranked = provisional
-				.Select(p => (p.Article, Score: p.Embedding != null && queryEmbedding.Length > 0 ? CosSim(p.Embedding, queryEmbedding) : p.Score))
-				.OrderByDescending(x => x.Score)
-				.Take(top)
-				.ToList();
-			return reranked;
+			// Already ordered by score from the service. Just take top and return.
+			return list.Take(top).ToList();
 		}
 	}
 }
