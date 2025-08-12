@@ -61,11 +61,15 @@ namespace talking_points.Services
 				}
 				if (exists)
 				{
-					try
+						try
 					{
 						var existing = await _indexClient.GetIndexAsync(_chunkIndexName);
 						var embField = existing.Value.Fields.FirstOrDefault(f => f.Name == "embedding");
 						var existingDims = embField?.VectorSearchDimensions;
+							var hasVectorConfig = existing.Value.VectorSearch != null
+								&& existing.Value.VectorSearch.Profiles?.Count > 0
+								&& embField is not null
+								&& !string.IsNullOrWhiteSpace(embField.VectorSearchProfileName);
 						if (!_detectedDims.HasValue)
 						{
 							try
@@ -80,7 +84,7 @@ namespace talking_points.Services
 								_detectedDims = existingDims ?? 1536;
 							}
 						}
-						if (existingDims.HasValue && _detectedDims.HasValue && existingDims.Value != _detectedDims.Value)
+							if (existingDims.HasValue && _detectedDims.HasValue && existingDims.Value != _detectedDims.Value)
 						{
 							var msg = $"Chunk index '{_chunkIndexName}' has embedding dims {existingDims.Value} but model returns {_detectedDims.Value}";
 							if (_recreateOnMismatch)
@@ -95,6 +99,21 @@ namespace talking_points.Services
 								return;
 							}
 						}
+							else if (!hasVectorConfig)
+							{
+								var msg = $"Chunk index '{_chunkIndexName}' missing vector search configuration or field profile; recreating to enable vector queries.";
+								if (_recreateOnMismatch)
+								{
+									_logger.LogWarning(msg);
+									await _indexClient.DeleteIndexAsync(_chunkIndexName);
+									// proceed to recreate
+								}
+								else
+								{
+									_logger.LogError(msg + " Set AzureSearch:RecreateOnDimensionMismatch=true to auto-fix.");
+									return;
+								}
+							}
 						else
 						{
 							if (existingDims.HasValue)
@@ -226,32 +245,25 @@ namespace talking_points.Services
 			options.Select.Add("title");
 			options.Select.Add("chunkContent");
 			options.Select.Add("publishedAt");
-			options.Select.Add("embedding");
-			SearchResults<SearchDocument> searchResults;
+			// Attach a vector query so chunks are returned even when lexical match is weak.
 			try
 			{
-				var resp = await _chunkSearchClient.SearchAsync<SearchDocument>(query, options);
-				searchResults = resp.Value;
-			}
-			catch (RequestFailedException ex) when (ex.Message.Contains("not a retrievable field", StringComparison.OrdinalIgnoreCase))
-			{
-				_logger.LogWarning("Embedding field not retrievable for chunk index '{index}'. Reissuing search without embeddings; skipping rerank.", _chunkIndexName);
-				for (int i = options.Select.Count - 1; i >= 0; i--)
+				options.VectorSearch = new()
 				{
-					if (string.Equals(options.Select[i], "embedding", StringComparison.OrdinalIgnoreCase))
-						options.Select.RemoveAt(i);
-				}
-				queryEmbedding = Array.Empty<float>();
-				var resp2 = await _chunkSearchClient.SearchAsync<SearchDocument>(query, options);
-				searchResults = resp2.Value;
+					Queries = { new VectorizedQuery(queryEmbedding) { KNearestNeighborsCount = Math.Max(topChunks * 3, 50), Fields = { "embedding" } } }
+				};
 			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "Failed to attach vector query to chunk search; proceeding lexical-only.");
+			}
+			var resp = await _chunkSearchClient.SearchAsync<SearchDocument>(query, options);
+			var searchResults = resp.Value;
 			var chunkHits = new List<(int ArticleId, string Title, string Chunk, DateTime? PublishedAt, double LexScore, float[]? Emb)>();
 			await foreach (var r in searchResults.GetResultsAsync())
 			{
 				var doc = r.Document;
-				float[]? emb = null;
-				if (doc.TryGetValue("embedding", out var embObj) && embObj is IEnumerable<float> floats)
-					emb = floats.ToArray();
+				float[]? emb = null; // we no longer require retrieving embeddings; service score is sufficient
 				int articleId = doc.ContainsKey("articleId") && int.TryParse(doc["articleId"].ToString(), out var aid) ? aid : 0;
 				DateTime? published = doc.ContainsKey("publishedAt") && doc["publishedAt"] is DateTimeOffset dto ? dto.DateTime : (DateTime?)null;
 				chunkHits.Add((articleId,
@@ -261,29 +273,12 @@ namespace talking_points.Services
 								r.Score ?? 0,
 								emb));
 			}
-			static double CosSim(float[] a, float[] b)
-			{
-				double dot = 0, na = 0, nb = 0; int len = Math.Min(a.Length, b.Length);
-				for (int i = 0; i < len; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
-				return (na > 0 && nb > 0) ? dot / (Math.Sqrt(na) * Math.Sqrt(nb)) : 0;
-			}
-			var reranked = chunkHits.Select(h => new
-			{
-				h.ArticleId,
-				h.Title,
-				h.Chunk,
-				h.PublishedAt,
-				Score = (h.Emb != null && queryEmbedding.Length > 0) ? CosSim(h.Emb, queryEmbedding) : h.LexScore
-			})
-			.OrderByDescending(x => x.Score)
-			.Take(topChunks)
-			.ToList();
 
-			var grouped = reranked
+			var grouped = chunkHits
 				.GroupBy(x => x.ArticleId)
 				.Select(g => (
 					Article: new NewsArticle { Id = g.Key, Title = g.First().Title, Content = g.First().Chunk, PublishedAt = g.First().PublishedAt },
-					Score: g.Max(x => x.Score),
+					Score: g.Max(x => x.LexScore),
 					Snippet: g.First().Chunk.Length > 400 ? g.First().Chunk.Substring(0, 400) + "..." : g.First().Chunk))
 				.OrderByDescending(t => t.Score)
 				.Take(topArticles)
