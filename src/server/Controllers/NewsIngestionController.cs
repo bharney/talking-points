@@ -17,8 +17,6 @@ namespace talking_points.Controllers
 	public class IngestionController : ControllerBase
 	{
 		private readonly NewsApiIngestionService _ingestionService;
-		private readonly INewsArticleRepository _newsArticleRepository;
-		private readonly IKeywordService _keywordService;
 		private readonly IServiceScopeFactory _scopeFactory;
 		private readonly ILogger<IngestionController> _logger;
 		private static bool _isIngestionLoopRunning = false;
@@ -40,11 +38,10 @@ namespace talking_points.Controllers
 		{
 			// Use the named client so default headers (User-Agent, X-Api-Key) are applied.
 			_ingestionService = new NewsApiIngestionService(httpClientFactory.CreateClient("NewsApi"), configuration);
-			_newsArticleRepository = newsArticleRepository;
 			_logger = logger;
 			_scopeFactory = scopeFactory;
 			_configuration = configuration;
-			_keywordService = keywordService;
+
 
 			// Allow configuring loop behavior via configuration
 			if (int.TryParse(_configuration["NewsApi:MaxRequestsPerDay"], out var maxReq) && maxReq > 0)
@@ -66,14 +63,17 @@ namespace talking_points.Controllers
 		public async Task<IActionResult> IngestTopHeadlines()
 		{
 			var fetched = await _ingestionService.FetchTopHeadlinesAsync();
-			var latest = await _newsArticleRepository.GetLatestPublishedAtAsync();
-			var filtered = await _newsArticleRepository.FilterNewerUniqueAsync(fetched, latest);
+			using var scope = _scopeFactory.CreateScope();
+			var repo = scope.ServiceProvider.GetRequiredService<INewsArticleRepository>();
+			var keywordService = scope.ServiceProvider.GetRequiredService<IKeywordService>();
+			var latest = await repo.GetLatestPublishedAtAsync();
+			var filtered = await repo.FilterNewerUniqueAsync(fetched, latest);
 			if (filtered.Count == 0)
 			{
 				return Ok(new { Message = "No new articles", LatestKnown = latest });
 			}
-			await _newsArticleRepository.AddArticlesAsync(filtered);
-			await _keywordService.GenerateKeywordsAsync(filtered);
+			await repo.AddArticlesAsync(filtered);
+			await keywordService.GenerateKeywordsAsync(filtered);
 			return Ok();
 		}
 
@@ -120,12 +120,13 @@ namespace talking_points.Controllers
 						using (var scope = _scopeFactory.CreateScope())
 						{
 							var repo = scope.ServiceProvider.GetRequiredService<INewsArticleRepository>();
+							var keywordService = scope.ServiceProvider.GetRequiredService<IKeywordService>();
 							var fetched = await _ingestionService.FetchTopHeadlinesAsync();
 							var latest = await repo.GetLatestPublishedAtAsync();
 							var filtered = await repo.FilterNewerUniqueAsync(fetched, latest);
 							if (filtered.Count > 0)
 							{
-								await _keywordService.GenerateKeywordsAsync(filtered);
+								await keywordService.GenerateKeywordsAsync(filtered);
 								await repo.AddArticlesAsync(filtered);
 								_logger?.LogInformation("Inserted {count} new articles (loop)", filtered.Count);
 							}

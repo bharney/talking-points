@@ -52,6 +52,7 @@ namespace talking_points.Services
 			{
 				using var scope = _services.CreateScope();
 				var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+				// resolve scoped services inside the iteration so they are recreated each time
 				var vectorIndex = scope.ServiceProvider.GetRequiredService<IVectorIndexService>();
 				var telemetry = scope.ServiceProvider.GetService<TelemetryClient>();
 				var redis = scope.ServiceProvider.GetRequiredService<IRedisConnectionManager>().GetDatabase();

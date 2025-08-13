@@ -99,11 +99,11 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddTransient<DbSeeder>();
 builder.Services.AddSingleton<IRedisConnectionManager, RedisConnectionManager>();
-// Vector / RAG services
-builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
-builder.Services.AddSingleton<IVectorIndexService, VectorIndexService>();
-builder.Services.AddSingleton<IRagAnswerService, RagAnswerService>();
-builder.Services.AddSingleton<IChunkedVectorIndexService, ChunkedVectorIndexService>();
+// Vector / RAG services: use scoped so a fresh instance is created per scope/iteration
+builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
+builder.Services.AddScoped<IVectorIndexService, VectorIndexService>();
+builder.Services.AddScoped<IRagAnswerService, RagAnswerService>();
+builder.Services.AddScoped<IChunkedVectorIndexService, ChunkedVectorIndexService>();
 builder.Services.AddScoped<IKeywordService, KeywordService>();
 builder.Services.AddHostedService<VectorIngestionHostedService>();
 // Caches
