@@ -244,52 +244,88 @@ namespace talking_points.Services
 
 		public async Task<IReadOnlyList<(ArticleDetails Article, double Score, string Snippet)>> ChunkHybridSearchAsync(string query, int topChunks = 15, int topArticles = 10)
 		{
-			var queryEmbedding = await _embeddingService.EmbedAsync(query);
-			var options = new SearchOptions { Size = topChunks };
+			// Quote the query to treat it as a literal phrase in Simple syntax so characters like '-' don't act as operators.
+			string escaped = (query ?? string.Empty).Replace("\"", "\\\"");
+			string searchText = $"\"{escaped}\"";
+
+			var queryEmbedding = await _embeddingService.EmbedAsync(query ?? string.Empty);
+			var options = new SearchOptions { Size = topChunks, QueryType = SearchQueryType.Simple, SearchMode = SearchMode.All };
 			options.Select.Add("id");
 			options.Select.Add("articleId");
 			options.Select.Add("title");
 			options.Select.Add("chunkContent");
 			options.Select.Add("publishedAt");
+			options.SearchFields.Add("title");
+			options.SearchFields.Add("chunkContent");
+			// Add highlighting for better snippets
+			options.HighlightFields.Add("chunkContent");
+			options.HighlightPreTag = "<em>";
+			options.HighlightPostTag = "</em>";
 			// Attach a vector query so chunks are returned even when lexical match is weak.
 			try
 			{
 				options.VectorSearch = new()
 				{
-					Queries = { new VectorizedQuery(queryEmbedding) { KNearestNeighborsCount = Math.Max(topChunks * 3, 50), Fields = { "embedding" } } }
+					Queries = { new VectorizedQuery(queryEmbedding) { KNearestNeighborsCount = Math.Max(topChunks * 5, 100), Fields = { "embedding" } } }
 				};
 			}
 			catch (Exception ex)
 			{
 				_logger.LogWarning(ex, "Failed to attach vector query to chunk search; proceeding lexical-only.");
 			}
-			var resp = await _chunkSearchClient.SearchAsync<SearchDocument>(query, options);
+			var resp = await _chunkSearchClient.SearchAsync<SearchDocument>(searchText, options);
 			var searchResults = resp.Value;
-			var chunkHits = new List<(string ArticleId, string Title, string Chunk, DateTime? PublishedAt, double LexScore, float[]? Emb)>();
+			var chunkHits = new List<(string ArticleId, string Title, string Chunk, DateTime? PublishedAt, double Score, string? Highlight)>();
 			await foreach (var r in searchResults.GetResultsAsync())
 			{
 				var doc = r.Document;
-				float[]? emb = null; // we no longer require retrieving embeddings; service score is sufficient
 				string articleId = doc.ContainsKey("articleId") ? doc["articleId"]?.ToString() ?? string.Empty : string.Empty;
 				DateTime? published = doc.ContainsKey("publishedAt") && doc["publishedAt"] is DateTimeOffset dto ? dto.DateTime : (DateTime?)null;
-				chunkHits.Add((articleId,
-								doc.ContainsKey("title") ? doc["title"]?.ToString() ?? string.Empty : string.Empty,
-								doc.ContainsKey("chunkContent") ? doc["chunkContent"]?.ToString() ?? string.Empty : string.Empty,
-								published,
-								r.Score ?? 0,
-								emb));
+				var title = doc.ContainsKey("title") ? doc["title"]?.ToString() ?? string.Empty : string.Empty;
+				var chunk = doc.ContainsKey("chunkContent") ? doc["chunkContent"]?.ToString() ?? string.Empty : string.Empty;
+				var highlight = r.Highlights != null && r.Highlights.TryGetValue("chunkContent", out var hl) && hl?.Count > 0 ? hl[0] : null;
+				chunkHits.Add((articleId, title, chunk, published, r.Score ?? 0, highlight));
 			}
 
 			var grouped = chunkHits
 				.GroupBy(x => x.ArticleId)
-				.Select(g => (
-					Article: new ArticleDetails { Id = Guid.TryParse(g.Key, out var guid) ? guid : Guid.Empty, Title = g.First().Title, Content = g.First().Chunk, PublishedAt = g.First().PublishedAt },
-					Score: g.Max(x => x.LexScore),
-					Snippet: g.First().Chunk.Length > 400 ? g.First().Chunk.Substring(0, 400) + "..." : g.First().Chunk))
+				.Select(g =>
+				{
+					var best = g.OrderByDescending(x => x.Score).First();
+					var snippet = best.Highlight ?? (best.Chunk.Length > 400 ? best.Chunk.Substring(0, 400) + "..." : best.Chunk);
+					return (
+						Article: new ArticleDetails
+						{
+							Id = Guid.TryParse(g.Key, out var guid) ? guid : Guid.Empty,
+							Title = best.Title,
+							Content = best.Chunk,
+							PublishedAt = best.PublishedAt
+						},
+						Score: best.Score,
+						Snippet: snippet
+					);
+				})
 				.OrderByDescending(t => t.Score)
+				.ToList();
+
+			// Filter to high-likelihood results: keep those containing the literal phrase, or within a relative score band.
+			string phrase = (query ?? string.Empty).Trim();
+			var topScore = grouped.Count > 0 ? grouped.Max(x => x.Score) : 0;
+			double relThreshold = topScore * 0.6; // keep top 60% band
+			bool ContainsPhrase((ArticleDetails Article, double Score, string Snippet) item)
+			{
+				if (string.IsNullOrEmpty(phrase)) return true;
+				var cmp = StringComparison.OrdinalIgnoreCase;
+				return (item.Article.Title?.IndexOf(phrase, cmp) >= 0)
+					|| (item.Article.Content?.IndexOf(phrase, cmp) >= 0)
+					|| (item.Snippet?.IndexOf(phrase, cmp) >= 0);
+			}
+			var filtered = grouped
+				.Where(it => ContainsPhrase(it) || it.Score >= relThreshold)
+				.OrderByDescending(it => it.Score)
 				.Take(topArticles)
 				.ToList();
-			return grouped;
+			return filtered;
 		}
 
 		private static IEnumerable<string> Chunk(string text, int size, int overlap)
