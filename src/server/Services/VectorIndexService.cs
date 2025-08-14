@@ -229,28 +229,32 @@ namespace talking_points.Services
 		public async Task<IReadOnlyList<(ArticleDetails Article, double Score)>> HybridSearchAsync(string query, int top = 10)
 		{
 			// True hybrid: run lexical search with a vector kNN query so we don't depend solely on keyword matches.
-			// If the SDK/Index doesn't allow retrieving embeddings, we won't fetch them; we'll trust the service's score.
-			var queryEmbedding = await _embeddingService.EmbedAsync(query);
-			var options = new SearchOptions { Size = top, IncludeTotalCount = true };
+			// Treat the incoming text as a literal phrase so characters like '-' don't act as operators (Simple syntax).
+			string escaped = (query ?? string.Empty).Replace("\"", "\\\"");
+			string searchText = $"\"{escaped}\"";
+			var queryEmbedding = await _embeddingService.EmbedAsync(query ?? string.Empty);
+			var options = new SearchOptions { Size = top, IncludeTotalCount = true, QueryType = SearchQueryType.Simple, SearchMode = SearchMode.All };
 			options.Select.Add("id");
 			options.Select.Add("title");
 			options.Select.Add("description");
 			options.Select.Add("content");
 			options.Select.Add("publishedAt");
+			options.SearchFields.Add("title");
+			options.SearchFields.Add("description");
+			options.SearchFields.Add("content");
 			// Add the vector query (kNN) against the embedding field.
 			try
 			{
 				options.VectorSearch = new()
 				{
-					Queries = { new VectorizedQuery(queryEmbedding) { KNearestNeighborsCount = Math.Max(top, 50), Fields = { "embedding" } } }
+					Queries = { new VectorizedQuery(queryEmbedding) { KNearestNeighborsCount = Math.Max(top * 5, 100), Fields = { "embedding" } } }
 				};
 			}
 			catch (Exception ex)
 			{
 				_logger.LogWarning(ex, "Failed to attach vector query; proceeding with lexical only for this request.");
 			}
-
-			var resp = await _searchClient.SearchAsync<SearchDocument>(query, options);
+			var resp = await _searchClient.SearchAsync<SearchDocument>(searchText, options);
 			var results = resp.Value;
 			var list = new List<(ArticleDetails Article, double Score)>();
 			await foreach (var r in results.GetResultsAsync())
@@ -260,13 +264,28 @@ namespace talking_points.Services
 				{
 					Id = Guid.TryParse(doc.ContainsKey("id") ? doc["id"]?.ToString() : string.Empty, out var guid) ? guid : Guid.Empty,
 					Title = doc.ContainsKey("title") ? doc["title"]?.ToString() ?? string.Empty : string.Empty,
-					Description = doc.ContainsKey("description") ? doc["description"]?.ToString() : null,
+					Description = doc.ContainsKey("description") ? (doc["description"]?.ToString() ?? string.Empty) : string.Empty,
 					Content = doc.ContainsKey("content") ? doc["content"]?.ToString() ?? string.Empty : string.Empty,
 					PublishedAt = doc.ContainsKey("publishedAt") && doc["publishedAt"] is DateTimeOffset dto ? dto.DateTime : (DateTime?)null
 				}, r.Score ?? 0));
 			}
-			// Already ordered by score from the service. Just take top and return.
-			return list.Take(top).ToList();
+			// High-likelihood filtering: keep items that contain the literal phrase in title/description/content or fall within top score band
+			string phrase = (query ?? string.Empty).Trim();
+			var topScore = list.Count > 0 ? list.Max(x => x.Score) : 0.0;
+			double relThreshold = topScore * 0.6; // top 60%
+			bool ContainsPhrase(ArticleDetails a)
+			{
+				var cmp = StringComparison.OrdinalIgnoreCase;
+				return (a.Title?.IndexOf(phrase, cmp) >= 0)
+					|| (a.Description?.IndexOf(phrase, cmp) >= 0)
+					|| (a.Content?.IndexOf(phrase, cmp) >= 0);
+			}
+			var filtered = list
+				.Where(t => ContainsPhrase(t.Article) || t.Score >= relThreshold)
+				.OrderByDescending(t => t.Score)
+				.Take(top)
+				.ToList();
+			return filtered;
 		}
 	}
 }
