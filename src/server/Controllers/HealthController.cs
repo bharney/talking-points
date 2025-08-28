@@ -62,11 +62,16 @@ namespace talking_points.Controllers
 			{
 				var probe = await _embedding.EmbedAsync("health probe");
 				var dims = probe.Length;
+				var diag = (_embedding as EmbeddingService)?.GetLastErrorInfo();
 				return Ok(new
 				{
 					dimensions = dims,
 					success = dims > 0,
-					note = dims == 0 ? "Embedding service returned empty vector (likely config / auth / deployment issue)." : null
+					note = dims == 0 ? "Embedding service returned empty vector (likely config / auth / deployment issue)." : null,
+					lastStatus = diag?.status,
+					lastError = diag?.error,
+					lastErrorAtUtc = diag?.atUtc,
+					deployment = diag?.deployment
 				});
 			}
 			catch (Exception ex)
@@ -90,13 +95,18 @@ namespace talking_points.Controllers
 				_logger.LogError(ex, "Embedding test threw exception");
 				return StatusCode(500, new { error = ex.Message, elapsedMs = (DateTime.UtcNow - started).TotalMilliseconds });
 			}
+			var diag = (_embedding as EmbeddingService)?.GetLastErrorInfo();
 			return Ok(new
 			{
 				inputLength = text.Length,
 				vectorLength = vec.Length,
 				first8 = vec.Take(8).ToArray(),
 				elapsedMs = (DateTime.UtcNow - started).TotalMilliseconds,
-				warning = vec.Length == 0 ? "Empty vector returned; check deployment name, key, network, or model type." : null
+				warning = vec.Length == 0 ? "Empty vector returned; check deployment name, key, network, or model type." : null,
+				lastStatus = diag?.status,
+				lastError = diag?.error,
+				lastErrorAtUtc = diag?.atUtc,
+				deployment = diag?.deployment
 			});
 		}
 	}

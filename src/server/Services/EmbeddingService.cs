@@ -21,6 +21,9 @@ namespace talking_points.Services
 		private readonly TimeSpan _ttl;
 		private readonly int _maxRetries;
 		private readonly TimeSpan _baseDelay;
+		private int? _lastStatus;
+		private string? _lastError;
+		private DateTime? _lastErrorAtUtc;
 
 		public EmbeddingService(IConfiguration config, ILogger<EmbeddingService> logger, IEmbeddingCache? redisCache = null)
 		{
@@ -66,10 +69,15 @@ namespace talking_points.Services
 						try { await _redisCache.SetAsync(text, vector, _ttl); }
 						catch (Exception exSet) { _logger.LogWarning(exSet, "Embedding cache set failed"); }
 					}
+					_lastStatus = 200;
+					_lastError = null;
 					return vector;
 				}
 				catch (RequestFailedException rfe) when (IsRetriableStatus(rfe.Status) && attempt <= _maxRetries)
 				{
+					_lastStatus = rfe.Status;
+					_lastError = rfe.Message;
+					_lastErrorAtUtc = DateTime.UtcNow;
 					var delay = ComputeDelay(attempt, rfe);
 					_logger.LogWarning(rfe, "Embedding request failed with status {Status}; retry {Attempt}/{Max} after {Delay} ms", rfe.Status, attempt, _maxRetries, (int)delay.TotalMilliseconds);
 					await Task.Delay(delay);
@@ -77,6 +85,9 @@ namespace talking_points.Services
 				}
 				catch (Exception ex) when (attempt <= _maxRetries)
 				{
+					_lastStatus = null;
+					_lastError = ex.Message;
+					_lastErrorAtUtc = DateTime.UtcNow;
 					var delay = ComputeDelay(attempt, ex);
 					_logger.LogWarning(ex, "Embedding request unexpected error; retry {Attempt}/{Max} after {Delay} ms", attempt, _maxRetries, (int)delay.TotalMilliseconds);
 					await Task.Delay(delay);
@@ -84,11 +95,17 @@ namespace talking_points.Services
 				}
 				catch (Exception final)
 				{
+					_lastStatus = _lastStatus ?? (final is RequestFailedException fr ? fr.Status : null);
+					_lastError = final.Message;
+					_lastErrorAtUtc = DateTime.UtcNow;
 					_logger.LogError(final, "Embedding request failed after {Attempts} attempts", attempt);
 					return Array.Empty<float>();
 				}
 			}
 		}
+
+		// Diagnostics accessors for health endpoints
+		public (int? status, string? error, DateTime? atUtc, string deployment) GetLastErrorInfo() => (_lastStatus, _lastError, _lastErrorAtUtc, _deployment);
 
 		private static bool IsRetriableStatus(int status) => status == 408 || status == 429 || status == 500 || status == 502 || status == 503 || status == 504 || status == 401 || status == 403; // include auth/firewall transient
 
