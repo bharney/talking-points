@@ -16,15 +16,13 @@ namespace talking_points.Controllers
         private IKeywordsSearchClient _keywordsSearchClient;
         private IArticleRepository _articleRepository;
         private IKeywordRepository _keywordRepository;
-        private IArticleDetailsSearchClient _articleDetailsSearchClient;
-        public SearchController(ILogger<SearchController> logger, IConfiguration config, IArticleRepository articleRepository, IKeywordRepository keywordRepository, IKeywordsSearchClient keywordsSearchClient, IArticleDetailsSearchClient articleDetailsSearchClient)
+        public SearchController(ILogger<SearchController> logger, IConfiguration config, IArticleRepository articleRepository, IKeywordRepository keywordRepository, IKeywordsSearchClient keywordsSearchClient)
         {
             _logger = logger;
             _config = config;
             _articleRepository = articleRepository;
             _keywordRepository = keywordRepository;
             _keywordsSearchClient = keywordsSearchClient;
-            _articleDetailsSearchClient = articleDetailsSearchClient;
         }
         [HttpGet]
         public async Task<IActionResult> Index(string searchPhrase)
@@ -35,32 +33,18 @@ namespace talking_points.Controllers
             }
 
             // get articles based on keyword search
-            async Task<List<ArticleDetails>> Search(string query)
+            var searchKeywordResults = await _keywordsSearchClient.SearchAsync<Keywords>(searchPhrase);
+            var articles = new List<ArticleDetails>();
+            var seen = new HashSet<Guid>();
+            await foreach (SearchResult<Keywords> result in searchKeywordResults.GetResultsAsync())
             {
-                var searchKeywordResults = await _keywordsSearchClient.SearchAsync<Keywords>(query);
-
-                var articles = new List<ArticleDetails>();
-                await foreach (SearchResult<Keywords> result in searchKeywordResults.GetResultsAsync())
+                var article = await _articleRepository.Get(result.Document.ArticleId);
+                if (article != null && seen.Add(article.Id))
                 {
-                    var article = await _articleRepository.Get(result.Document.ArticleId);
-                    if (article != null)
-                    {
-                        articles.Add(article);
-                    }
+                    articles.Add(article);
                 }
-                var searchArticleResults = await _articleDetailsSearchClient.SearchAsync<ArticleDetails>(query);
-                await foreach (SearchResult<ArticleDetails> result in searchArticleResults.GetResultsAsync())
-                {
-                    var article = await _articleRepository.Get(result.Document.Id);
-                    if (article != null)
-                    {
-                        articles.Add(article);
-                    }
-                }
-                return articles;
             }
-
-            var searchResults = await Search(searchPhrase);
+            var searchResults = articles;
             return Ok(searchResults);
         }
     }
