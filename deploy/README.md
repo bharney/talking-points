@@ -21,35 +21,35 @@ This Helm chart deploys the Talking Points application to Kubernetes, including:
 1. **Install the chart:**
 
    ```bash
-  helm install talking-points ./deploy --namespace talking-points --create-namespace
+   helm install talking-points ./deploy --namespace talking-points --create-namespace
    ```
 
 2. **Install with custom values:**
 
    ```bash
-  helm install talking-points ./deploy -f custom-values.yaml --namespace talking-points --create-namespace
+   helm install talking-points ./deploy -f custom-values.yaml --namespace talking-points --create-namespace
    ```
 
 3. **Upgrade the release:**
    ```bash
-  helm upgrade talking-points ./deploy --namespace talking-points
+   helm upgrade talking-points ./deploy --namespace talking-points
    ```
 
 ## Configuration
 
 The following table lists the configurable parameters and their default values:
 
-| Parameter                              | Description                          | Default                                                  |
-| -------------------------------------- | ------------------------------------ | -------------------------------------------------------- |
-| `frontend.image.repository`            | Frontend image repository            | `starterpackregistry.azurecr.io/talking-points-frontend` |
-| `frontend.image.tag`                   | Frontend image tag                   | `latest`                                                 |
-| `frontend.service.type`                | Frontend service type                | `LoadBalancer`                                           |
-| `backend.image.repository`             | Backend image repository             | `starterpackregistry.azurecr.io/talking-points-backend`  |
-| `backend.image.tag`                    | Backend image tag                    | `latest`                                                 |
-| `serviceAccount.annotations`           | Backend workload identity annotation | `{}`                                                     |
-| `ingress.enabled`                      | Enable ingress                       | `false`                                                  |
-| `networkPolicy.enabled`                | Enable network policy                | `false`                                                  |
-| `azureWorkloadIdentity.webhook.enabled`| Install chart-managed webhook        | `false`                                                  |
+| Parameter                               | Description                          | Default                                                  |
+| --------------------------------------- | ------------------------------------ | -------------------------------------------------------- |
+| `frontend.image.repository`             | Frontend image repository            | `starterpackregistry.azurecr.io/talking-points-frontend` |
+| `frontend.image.tag`                    | Frontend image tag                   | `latest`                                                 |
+| `frontend.service.type`                 | Frontend service type                | `LoadBalancer`                                           |
+| `backend.image.repository`              | Backend image repository             | `starterpackregistry.azurecr.io/talking-points-backend`  |
+| `backend.image.tag`                     | Backend image tag                    | `latest`                                                 |
+| `serviceAccount.annotations`            | Backend workload identity annotation | `{}`                                                     |
+| `ingress.enabled`                       | Enable ingress                       | `false`                                                  |
+| `networkPolicy.enabled`                 | Enable network policy                | `false`                                                  |
+| `azureWorkloadIdentity.webhook.enabled` | Install chart-managed webhook        | `false`                                                  |
 
 ## Azure Workload Identity
 
