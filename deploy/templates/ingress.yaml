@@ -4,10 +4,27 @@ kind: Ingress
 metadata:
   name: {{ .Values.ingress.name }}
   namespace: {{ .Release.Namespace }}
+  {{- if and .Values.ingress.tls.enabled .Values.certManager.issuer.name }}
+  annotations:
+    {{- if eq .Values.certManager.issuer.kind "Issuer" }}
+    cert-manager.io/issuer: {{ .Values.certManager.issuer.name | quote }}
+    {{- else }}
+    cert-manager.io/cluster-issuer: {{ .Values.certManager.issuer.name | quote }}
+    {{- end }}
+  {{- end }}
 spec:
   ingressClassName: webapprouting.kubernetes.azure.com
+  {{- if and .Values.ingress.tls.enabled .Values.ingress.host }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
   rules:
-    - http:
+    - {{- if .Values.ingress.host }}
+      host: {{ .Values.ingress.host }}
+      {{- end }}
+      http:
         paths:
           - path: /
             pathType: Prefix

@@ -69,8 +69,19 @@ ingress:
     kubernetes.io/ingress.class: webapprouting.kubernetes.azure.com
   host: "talkingpoints.centralus.cloudapp.azure.com"
   tls:
-    enabled: false
+    enabled: true
     secretName: talking-points-tls
+
+# cert-manager configuration for ingress TLS
+certManager:
+  issuer:
+    create: true
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+    email: "bharney0@gmail.com"
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretName: letsencrypt-prod-account-key
+    ingressClass: webapprouting.kubernetes.azure.com
 
 # Network Policy configuration
 networkPolicy:
