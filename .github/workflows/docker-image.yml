@@ -85,7 +85,7 @@ jobs:
         with:
           resource-group: ${{ vars.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
-          admin: "true"
+          admin: "false"
           use-kubelogin: "true"
 
       - name: Set up Helm
