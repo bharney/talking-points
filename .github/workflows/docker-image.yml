@@ -108,7 +108,7 @@ jobs:
             --set frontend.image.tag="$IMAGE_TAG" \
             --set backend.image.repository="$REGISTRY/talking-points-backend" \
             --set backend.image.tag="$IMAGE_TAG" \
-            --set serviceAccount.annotations.azure\.workload\.identity/client-id="${{ vars.BACKEND_WORKLOAD_CLIENT_ID }}" \
+            --set serviceAccount.annotations.azure\\.workload\\.identity/client-id="${{ vars.BACKEND_WORKLOAD_CLIENT_ID }}" \
             --set backend.env.AZURE_CLIENT_ID="${{ vars.BACKEND_WORKLOAD_CLIENT_ID }}" \
             --set backend.env.AZURE_TENANT_ID="${{ vars.AZURE_TENANT_ID }}" \
             --set-string backend.env.APPLICATIONINSIGHTS_CONNECTION_STRING="${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" \
