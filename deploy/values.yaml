@@ -44,7 +44,7 @@ backend:
 
   service:
     name: talking-points-backend
-    type: ClusterIP
+    type: LoadBalancer
     port: 8080
     targetPort: 8080
 
