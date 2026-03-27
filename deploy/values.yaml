@@ -67,7 +67,7 @@ ingress:
   name: talking-points-ingress
   annotations:
     kubernetes.io/ingress.class: webapprouting.kubernetes.azure.com
-  host: ""
+  host: "talkingpoints.centralus.cloudapp.azure.com"
   tls:
     enabled: false
     secretName: talking-points-tls
