@@ -67,25 +67,38 @@ jobs:
       - build-backend
     steps:
       - uses: actions/checkout@v4
+
       - name: Azure login
         uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Adds the missing tool required for Entra ID clusters
+      - name: Install kubelogin
+        uses: azure/use-kubelogin@v1
+        with:
+          kubelogin-version: "v0.1.1"
+
       - name: Set AKS context
         uses: azure/aks-set-context@v4
         with:
           resource-group: ${{ vars.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
+          use-kubelogin: "true" # Tells the action to use the tool installed above
+
       - name: Set up Helm
         uses: azure/setup-helm@v4
+
       - name: Ensure namespace exists
         run: |
           kubectl create namespace "$AKS_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Lint chart
         run: |
           helm lint ./deploy
+
       - name: Deploy release
         run: |
           helm upgrade --install "$HELM_RELEASE_NAME" ./deploy \
