@@ -80,7 +80,7 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Install kubelogin
-        uses: azure/use-kubelogin@v2
+        uses: azure/use-kubelogin@v1
         with:
           kubelogin-version: "v0.1.1"
 
